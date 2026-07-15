@@ -167,7 +167,7 @@ export default function ResumeAnalyzerPage() {
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste the target job description here..."
-                  className="w-full h-48 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50/50"
+                  className="w-full h-48 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-800 bg-gray-50/50"
                   required
                 />
               </div>
