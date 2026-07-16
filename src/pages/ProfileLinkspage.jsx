@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 import { api } from "../services/api"
+import useAuth from "../hooks/useAuth"
+import useAsync from "../hooks/useAsync"
 import Input from "../components/ui/Input"
 import Button from "../components/ui/Button"
 import Card from "../components/ui/Card"
@@ -11,24 +13,22 @@ export default function ProfileLinksPage() {
     leetcode: "",
     portfolio: ""
   })
-  const [loading, setLoading] = useState(false)
+  
+  const { user, updateUserCache } = useAuth()
+  const saveLinksAsync = useAsync(api.updateProfileLinks)
   const [message, setMessage] = useState({ text: "", type: "" })
 
-  // 🔁 Load from localStorage user profileLinks on first render
+  // Load from local storage user profileLinks on mount
   useEffect(() => {
-    const userStr = localStorage.getItem("user")
-    if (userStr) {
-      const user = JSON.parse(userStr)
-      if (user.profileLinks) {
-        setLinks({
-          linkedin: user.profileLinks.linkedin || "",
-          github: user.profileLinks.github || "",
-          leetcode: user.profileLinks.leetcode || "",
-          portfolio: user.profileLinks.portfolio || ""
-        })
-      }
+    if (user && user.profileLinks) {
+      setLinks({
+        linkedin: user.profileLinks.linkedin || "",
+        github: user.profileLinks.github || "",
+        leetcode: user.profileLinks.leetcode || "",
+        portfolio: user.profileLinks.portfolio || ""
+      })
     }
-  }, [])
+  }, [user])
 
   const handleChange = (e) => {
     setLinks({ ...links, [e.target.name]: e.target.value })
@@ -36,26 +36,17 @@ export default function ProfileLinksPage() {
 
   const handleSave = async (e) => {
     e.preventDefault()
-    setLoading(true)
     setMessage({ text: "", type: "" })
 
     try {
-      const response = await api.updateProfileLinks(links)
+      const response = await saveLinksAsync.execute(links)
       
-      // Update local storage user object
-      const userStr = localStorage.getItem("user")
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        user.profileLinks = response.profileLinks
-        localStorage.setItem("user", JSON.stringify(user))
-      }
+      // Update our hook/local storage cached user state
+      updateUserCache({ profileLinks: response.profileLinks })
 
       setMessage({ text: "Profile links saved successfully!", type: "success" })
     } catch (error) {
-      console.error(error)
       setMessage({ text: error.message || "Failed to update profile links.", type: "error" })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -88,7 +79,7 @@ export default function ProfileLinksPage() {
           <Button
             type="submit"
             variant="primary"
-            loading={loading}
+            loading={saveLinksAsync.loading}
           >
             Save Profiles
           </Button>

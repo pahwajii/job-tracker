@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { api } from "../services/api"
+import useAuth from "../hooks/useAuth"
+import useAsync from "../hooks/useAsync"
 import Input from "../components/ui/Input"
 import Button from "../components/ui/Button"
 
@@ -9,36 +10,33 @@ export default function Signup() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
+  const { signup } = useAuth()
+  
+  // Use useAsync hook to manage the signup action lifecycle
+  const signupAsync = useAsync(signup)
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError("")
+    setErrorMsg("")
 
     if (!name || !email || !password) {
-      setError("Please fill in all fields")
+      setErrorMsg("Please fill in all fields")
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setErrorMsg("Passwords do not match")
       return
     }
 
-    setLoading(true)
     try {
-      const data = await api.signup(name, email, password)
-      localStorage.setItem("token", data.token)
-      localStorage.setItem("user", JSON.stringify(data.user))
-      
+      await signupAsync.execute(name, email, password)
       navigate("/")
       window.location.reload()
     } catch (err) {
-      setError(err.message || "Failed to register account. Email may already be in use.")
-    } finally {
-      setLoading(false)
+      setErrorMsg(err.message || "Failed to register account. Email may already be in use.")
     }
   }
 
@@ -54,10 +52,10 @@ export default function Signup() {
           <p className="text-gray-500 dark:text-slate-400 mt-2 text-sm">Join Career Manager and track your applications</p>
         </div>
 
-        {error && (
+        {errorMsg && (
           <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-3 rounded-r-lg mb-6 text-sm flex items-center gap-2">
-            <span>⚠</span>
-            <span>{error}</span>
+            <span>⚠️</span>
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -106,7 +104,7 @@ export default function Signup() {
             type="submit"
             variant="primary"
             className="w-full py-3 mt-4 shadow-lg"
-            loading={loading}
+            loading={signupAsync.loading}
           >
             Sign Up
           </Button>

@@ -1,37 +1,35 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { api } from "../services/api"
+import useAuth from "../hooks/useAuth"
+import useAsync from "../hooks/useAsync"
 import Input from "../components/ui/Input"
 import Button from "../components/ui/Button"
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
+  const { login } = useAuth()
+  
+  // Use useAsync hook to manage the login action lifecycle
+  const loginAsync = useAsync(login)
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError("")
+    setErrorMsg("")
 
     if (!email || !password) {
-      setError("Please fill in all fields")
+      setErrorMsg("Please fill in all fields")
       return
     }
 
-    setLoading(true)
     try {
-      const data = await api.login(email, password)
-      localStorage.setItem("token", data.token)
-      localStorage.setItem("user", JSON.stringify(data.user))
-      
+      await loginAsync.execute(email, password)
       navigate("/")
       window.location.reload()
     } catch (err) {
-      setError(err.message || "Failed to log in. Please check your credentials.")
-    } finally {
-      setLoading(false)
+      setErrorMsg(err.message || "Failed to log in. Please check your credentials.")
     }
   }
 
@@ -47,10 +45,10 @@ export default function Login() {
           <p className="text-gray-500 dark:text-slate-400 mt-2 text-sm">Sign in to manage your career journey</p>
         </div>
 
-        {error && (
+        {errorMsg && (
           <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-3 rounded-r-lg mb-6 text-sm flex items-center gap-2">
-            <span>⚠</span>
-            <span>{error}</span>
+            <span>⚠️</span>
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -79,7 +77,7 @@ export default function Login() {
             type="submit"
             variant="primary"
             className="w-full py-3 mt-2 shadow-lg"
-            loading={loading}
+            loading={loginAsync.loading}
           >
             Sign In
           </Button>

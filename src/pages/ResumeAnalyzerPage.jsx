@@ -1,20 +1,21 @@
 import { useState, useEffect } from "react"
 import { api } from "../services/api"
+import useAsync from "../hooks/useAsync"
 import Card from "../components/ui/Card"
 import Button from "../components/ui/Button"
 import Input from "../components/ui/Input"
+import FileUpload from "../components/ui/FileUpload"
+import LoadingSpinner from "../components/ui/LoadingSpinner"
 
 export default function ResumeAnalyzerPage() {
   const [resumeText, setResumeText] = useState("")
   const [jobDescription, setJobDescription] = useState("")
   const [file, setFile] = useState(null)
-  
-  const [uploading, setUploading] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [uploadMessage, setUploadMessage] = useState({ text: "", type: "" })
-  const [analysisError, setAnalysisError] = useState("")
+  const [message, setMessage] = useState({ text: "", type: "" })
 
-  const [results, setResults] = useState(null) // { matchScore, missingKeywords: [], tailoringSuggestions: [] }
+  // Use useAsync hook to manage parsing/analysis async states
+  const uploadAsync = useAsync(api.uploadResume)
+  const analyzeAsync = useAsync(api.analyzeResume)
 
   // Load user's cached resume text on mount
   useEffect(() => {
@@ -23,36 +24,27 @@ export default function ResumeAnalyzerPage() {
       const user = JSON.parse(userStr)
       if (user.resumeText) {
         setResumeText(user.resumeText)
-        setUploadMessage({ text: "Loaded previously uploaded resume text.", type: "success" })
+        setMessage({ text: "Loaded previously uploaded resume text.", type: "success" })
       }
     }
   }, [])
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0])
-    setUploadMessage({ text: "", type: "" })
-  }
-
   const handleUploadResume = async (e) => {
-    e.preventDefault()
-    if (!file) {
-      setUploadMessage({ text: "Please select a PDF file first.", type: "error" })
-      return
-    }
+    if (e) e.preventDefault()
+    if (!file) return
 
-    setUploading(true)
-    setUploadMessage({ text: "", type: "" })
+    setMessage({ text: "", type: "" })
 
     const formData = new FormData()
     formData.append("resume", file)
 
     try {
-      const data = await api.uploadResume(formData)
+      const data = await uploadAsync.execute(formData)
       
-      // Update cached state
+      // Update local state
       setResumeText(data.resumeText || "")
       
-      // Update user in localStorage
+      // Update cache
       const userStr = localStorage.getItem("user")
       if (userStr) {
         const user = JSON.parse(userStr)
@@ -60,39 +52,24 @@ export default function ResumeAnalyzerPage() {
         localStorage.setItem("user", JSON.stringify(user))
       }
 
-      setUploadMessage({ text: "Resume uploaded and text extracted successfully!", type: "success" })
+      setMessage({ text: "Resume uploaded and text extracted successfully!", type: "success" })
       setFile(null)
     } catch (err) {
-      console.error(err)
-      setUploadMessage({ text: err.message || "Failed to upload resume. Ensure it is a valid PDF.", type: "error" })
-    } finally {
-      setUploading(false)
+      setMessage({ text: err.message || "Failed to parse PDF.", type: "error" })
     }
   }
 
   const handleAnalyze = async (e) => {
     e.preventDefault()
-    setAnalysisError("")
-    setResults(null)
-
-    if (!jobDescription.trim()) {
-      setAnalysisError("Job description is required for analysis.")
-      return
-    }
-
-    setAnalyzing(true)
+    if (!jobDescription.trim()) return
+    
     try {
-      const analysis = await api.analyzeResume(resumeText, jobDescription)
-      setResults(analysis)
+      await analyzeAsync.execute(resumeText, jobDescription)
     } catch (err) {
       console.error(err)
-      setAnalysisError(err.message || "Analysis failed. Please try again.")
-    } finally {
-      setAnalyzing(false)
     }
   }
 
-  // Helper for match score color classes
   const getScoreColor = (score) => {
     if (score >= 80) return "text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/40"
     if (score >= 50) return "text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/20 dark:border-amber-900/40"
@@ -107,48 +84,39 @@ export default function ResumeAnalyzerPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
-        {/* Input Controls */}
+        {/* Input Panel */}
         <div className="space-y-6">
-          {/* Resume Upload Form */}
+          {/* Resume Upload section using new FileUpload */}
           <Card className="p-6 space-y-4">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
               📄 1. Upload Resume (PDF)
             </h2>
             
-            <form onSubmit={handleUploadResume} className="space-y-3">
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-slate-800 rounded-xl cursor-pointer bg-gray-50/50 dark:bg-slate-900/30 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <span className="text-3xl mb-2">📤</span>
-                    <p className="text-xs text-gray-500 dark:text-slate-450 font-bold">
-                      {file ? file.name : "Click to select resume PDF (Max 5MB)"}
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                </label>
-              </div>
+            <div className="space-y-4">
+              <FileUpload
+                onFileSelect={setFile}
+                uploading={uploadAsync.loading}
+                accept=".pdf"
+                helperText="Select or drag resume PDF file here (Max 5MB)"
+              />
 
-              {uploadMessage.text && (
-                <div className={`p-3 rounded-lg text-xs font-bold ${uploadMessage.type === "success" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
-                  {uploadMessage.text}
+              {message.text && (
+                <div className={`p-3 rounded-lg text-xs font-bold ${message.type === "success" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
+                  {message.text}
                 </div>
               )}
 
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full py-2.5"
-                disabled={!file}
-                loading={uploading}
-              >
-                Upload & Extract
-              </Button>
-            </form>
+              {file && (
+                <Button
+                  variant="primary"
+                  className="w-full py-2.5"
+                  onClick={handleUploadResume}
+                  loading={uploadAsync.loading}
+                >
+                  Upload & Extract
+                </Button>
+              )}
+            </div>
 
             <div className="pt-2">
               <Input
@@ -163,7 +131,7 @@ export default function ResumeAnalyzerPage() {
             </div>
           </Card>
 
-          {/* Job Description Form */}
+          {/* Job Description Card */}
           <Card className="p-6 space-y-4">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
               💼 2. Job Description
@@ -179,9 +147,9 @@ export default function ResumeAnalyzerPage() {
                 required
               />
 
-              {analysisError && (
+              {analyzeAsync.error && (
                 <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-3 rounded-lg text-xs font-semibold border-l-4 border-red-500">
-                  {analysisError}
+                  {analyzeAsync.error}
                 </div>
               )}
 
@@ -189,7 +157,8 @@ export default function ResumeAnalyzerPage() {
                 type="submit"
                 variant="primary"
                 className="w-full py-3"
-                loading={analyzing}
+                loading={analyzeAsync.loading}
+                disabled={!resumeText.trim()}
               >
                 ✨ Run AI Analysis
               </Button>
@@ -197,13 +166,13 @@ export default function ResumeAnalyzerPage() {
           </Card>
         </div>
 
-        {/* Results Panel */}
+        {/* Results Card */}
         <Card className="p-6 min-h-[500px]">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2 tracking-tight">
             📊 Analysis Report
           </h2>
 
-          {!results && !analyzing && (
+          {!analyzeAsync.data && !analyzeAsync.loading && (
             <div className="flex flex-col items-center justify-center text-center h-[350px] text-gray-400 dark:text-slate-550">
               <span className="text-5xl mb-4">🎯</span>
               <p className="text-sm font-semibold text-gray-900 dark:text-slate-200">Your report will generate here.</p>
@@ -211,27 +180,26 @@ export default function ResumeAnalyzerPage() {
             </div>
           )}
 
-          {analyzing && (
+          {analyzeAsync.loading && (
             <div className="flex flex-col items-center justify-center text-center h-[350px] space-y-4">
-              <span className="animate-spin inline-block w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full" />
-              <p className="text-sm font-semibold text-gray-600 dark:text-slate-300">Google Gemini AI is processing your resume...</p>
-              <p className="text-xs text-gray-400 dark:text-slate-500 max-w-xs leading-relaxed">We are parsing key competencies, matching attributes, and identifying skill gaps.</p>
+              <LoadingSpinner size="lg" message="Google Gemini AI is processing your resume..." />
+              <p className="text-xs text-gray-400 dark:text-slate-550 max-w-xs leading-relaxed">We are parsing key competencies, matching attributes, and identifying skill gaps.</p>
             </div>
           )}
 
-          {results && (
+          {analyzeAsync.data && (
             <div className="space-y-6 animate-fadeIn">
               {/* Score Display */}
               <div className="flex items-center gap-4 p-4 rounded-2xl border border-gray-150 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-950/20">
-                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center text-2xl font-black ${getScoreColor(results.matchScore)}`}>
-                  {results.matchScore}%
+                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center text-2xl font-black ${getScoreColor(analyzeAsync.data.matchScore)}`}>
+                  {analyzeAsync.data.matchScore}%
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-850 dark:text-slate-100">Match Compatibility</h3>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                    {results.matchScore >= 80 
+                  <p className="text-xs text-gray-550 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    {analyzeAsync.data.matchScore >= 80 
                       ? "Excellent fit! Your resume is strongly aligned with this role."
-                      : results.matchScore >= 50
+                      : analyzeAsync.data.matchScore >= 50
                       ? "Good potential. Consider tailoring your resume with missing keywords to boost your match rate."
                       : "Weak match. Significant updates or highlighting transferrable skills might be necessary."}
                   </p>
@@ -242,8 +210,8 @@ export default function ResumeAnalyzerPage() {
               <div>
                 <h3 className="text-sm font-bold text-gray-700 dark:text-slate-350 mb-2.5 uppercase tracking-wider">Missing Keywords / Skill Gaps</h3>
                 <div className="flex flex-wrap gap-2">
-                  {results.missingKeywords && results.missingKeywords.length > 0 ? (
-                    results.missingKeywords.map((word, i) => (
+                  {analyzeAsync.data.missingKeywords && analyzeAsync.data.missingKeywords.length > 0 ? (
+                    analyzeAsync.data.missingKeywords.map((word, i) => (
                       <span key={i} className="bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 font-bold px-3 py-1.5 rounded-xl text-xs border border-amber-100 dark:border-amber-900/40">
                         {word}
                       </span>
@@ -254,13 +222,13 @@ export default function ResumeAnalyzerPage() {
                 </div>
               </div>
 
-              {/* Suggestions */}
+              {/* Actionable Suggestions */}
               <div>
                 <h3 className="text-sm font-bold text-gray-700 dark:text-slate-350 mb-2.5 uppercase tracking-wider">Actionable Resume Enhancements</h3>
                 <ul className="space-y-3">
-                  {results.tailoringSuggestions && results.tailoringSuggestions.map((tip, i) => (
-                    <li key={i} className="flex gap-2.5 text-xs text-gray-600 dark:text-slate-300 leading-relaxed items-start">
-                      <span className="text-indigo-600 dark:text-indigo-400 mt-0.5">✔</span>
+                  {analyzeAsync.data.tailoringSuggestions && analyzeAsync.data.tailoringSuggestions.map((tip, i) => (
+                    <li key={i} className="flex gap-2.5 text-xs text-gray-650 dark:text-slate-300 leading-relaxed items-start">
+                      <span className="text-indigo-650 dark:text-indigo-400 mt-0.5">✔</span>
                       <span>{tip}</span>
                     </li>
                   ))}

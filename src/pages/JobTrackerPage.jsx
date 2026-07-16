@@ -3,70 +3,33 @@ import JobForm from "../components/Jobform"
 import FilterBar from "../components/Filterbar"
 import JobCard from "../components/Jobcard"
 import StatBar from "../components/StatBar"
-import { api } from "../services/api"
+import useJobs from "../hooks/useJobs"
 import EmptyState from "../components/ui/EmptyState"
 import Skeleton from "../components/ui/Skeleton"
 import Card from "../components/ui/Card"
 
 export default function JobTrackerPage() {
-  const [jobs, setJobs] = useState([])
+  const {
+    jobs,
+    loading,
+    error,
+    fetchJobs,
+    addJob,
+    updateJobStatus,
+    updateJobChecklist,
+    removeJob
+  } = useJobs()
+
   const [filter, setFilter] = useState("all")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
-  // Fetch jobs on mount
+  // Load jobs on page mount
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const data = await api.getJobs()
-        setJobs(data)
-      } catch (err) {
-        console.error(err)
-        setError("Failed to fetch jobs. Please verify the backend is running.")
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchJobs()
-  }, [])
-
-  const addJob = async (jobData) => {
-    try {
-      const createdJob = await api.createJob(jobData)
-      setJobs([createdJob, ...jobs])
-    } catch (err) {
-      console.error(err)
-      alert(err.message || "Failed to create job.")
-    }
-  }
-
-  const deleteJob = async (id) => {
-    try {
-      await api.deleteJob(id)
-      setJobs(jobs.filter(j => j._id !== id))
-    } catch (err) {
-      console.error(err)
-      alert(err.message || "Failed to delete job.")
-    }
-  }
-
-  const updateStatus = async (id, newStatus) => {
-    try {
-      const updatedJob = await api.updateJob(id, { status: newStatus })
-      setJobs(jobs.map(j => j._id === id ? updatedJob : j))
-    } catch (err) {
-      console.error(err)
-      alert(err.message || "Failed to update status.")
-    }
-  }
-
-  const updateChecklist = (id, newChecklist) => {
-    setJobs(jobs.map(j => j._id === id ? { ...j, checklist: newChecklist } : j))
-  }
+  }, [fetchJobs])
 
   const filteredJobs = filter === "all" ? jobs : jobs.filter(j => j.status === filter)
 
-  if (loading) {
+  if (loading && jobs.length === 0) {
     return (
       <div className="max-w-5xl mx-auto px-4 pb-12 space-y-6">
         <div className="text-center mb-8">
@@ -100,7 +63,7 @@ export default function JobTrackerPage() {
           </div>
         </Card>
 
-        {/* Job list Skeletons */}
+        {/* Job Card Skeletons */}
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="p-5 flex justify-between items-center">
@@ -141,9 +104,9 @@ export default function JobTrackerPage() {
             <JobCard
               key={job._id}
               job={job}
-              onDelete={deleteJob}
-              onUpdateStatus={updateStatus}
-              onUpdateChecklist={updateChecklist}
+              onDelete={removeJob}
+              onUpdateStatus={updateJobStatus}
+              onUpdateChecklist={updateJobChecklist}
             />
           ))
         ) : (
