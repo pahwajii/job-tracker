@@ -1,4 +1,7 @@
 import { useState } from "react"
+import { useTheme } from "../context/ThemeContext"
+import Card from "./ui/Card"
+import Button from "./ui/Button"
 import {
   AreaChart,
   Area,
@@ -9,13 +12,13 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  Legend
+  Cell
 } from "recharts"
 
 export default function StatBar({ jobs = [] }) {
   const [showCharts, setShowCharts] = useState(false)
   const [timelinePeriod, setTimelinePeriod] = useState("day") // "day" or "week"
+  const { theme, isDark } = useTheme()
 
   // 1. Basic counts
   const total = jobs.length
@@ -31,14 +34,29 @@ export default function StatBar({ jobs = [] }) {
     ? Math.round((offer / interviewed) * 100) 
     : 0
 
-  // 3. Status distribution donut data
-  const statusColors = {
-    Saved: "#9ca3af",
-    Applied: "#3b82f6",
-    Screening: "#a855f7",
-    Interview: "#f59e0b",
-    Offer: "#10b981",
-    Rejected: "#ef4444"
+  // 3. Theme-aware colors
+  const statusColors = isDark ? {
+    Saved: "#64748b",      // slate-500
+    Applied: "#3b82f6",    // blue-500
+    Screening: "#c084fc",  // purple-400
+    Interview: "#fbbf24",  // amber-400
+    Offer: "#34d399",      // emerald-400
+    Rejected: "#f87171"     // red-400
+  } : {
+    Saved: "#94a3b8",      // slate-400
+    Applied: "#2563eb",    // blue-600
+    Screening: "#a855f7",  // purple-500
+    Interview: "#d97706",  // amber-600
+    Offer: "#059669",      // emerald-600
+    Rejected: "#dc2626"     // red-600
+  }
+
+  const chartTheme = {
+    grid: isDark ? "#1e293b" : "#f1f5f9",         // slate-800 vs slate-100
+    text: isDark ? "#94a3b8" : "#64748b",         // slate-400 vs slate-500
+    tooltipBg: isDark ? "#0f172a" : "#ffffff",    // slate-900 vs white
+    tooltipBorder: isDark ? "#334155" : "#e2e8f0",// slate-700 vs slate-200
+    tooltipText: isDark ? "#cbd5e1" : "#1e293b"   // slate-300 vs slate-900
   }
 
   const pieData = [
@@ -81,34 +99,34 @@ export default function StatBar({ jobs = [] }) {
     }))
 
   return (
-    <div className="space-y-6 mb-8 max-w-5xl mx-auto w-full">
+    <div className="space-y-6 mb-8 max-w-5xl mx-auto w-full transition-colors duration-300">
       {/* Counts Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-        <StatCard label="Total Apps" count={total} color="bg-indigo-50/50 text-indigo-700 border-indigo-100" />
-        <StatCard label="Saved" count={saved} color="bg-gray-50 text-gray-500 border-gray-150" />
-        <StatCard label="Applied" count={applied} color="bg-blue-50 text-blue-700 border-blue-100" />
-        <StatCard label="Screening" count={screening} color="bg-purple-50 text-purple-700 border-purple-100" />
-        <StatCard label="Interviews" count={interviewed} color="bg-amber-50 text-amber-700 border-amber-100" />
-        <StatCard label="Offers" count={offer} color="bg-emerald-50 text-emerald-700 border-emerald-100" />
+        <StatCard label="Total Apps" count={total} color="bg-indigo-50/50 text-indigo-750 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-900/30" />
+        <StatCard label="Saved" count={saved} color="bg-gray-50 text-gray-500 dark:bg-slate-900 dark:text-slate-400 border border-gray-150 dark:border-slate-800" />
+        <StatCard label="Applied" count={applied} color="bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/30" />
+        <StatCard label="Screening" count={screening} color="bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100/50 dark:border-purple-900/30" />
+        <StatCard label="Interviews" count={interviewed} color="bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/30" />
+        <StatCard label="Offers" count={offer} color="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-900/30" />
       </div>
 
       {/* Analytics Toggle */}
       <div className="flex justify-center">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setShowCharts(!showCharts)}
-          className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-md hover:shadow-indigo-500/20"
         >
           {showCharts ? "📊 Hide Visual Analytics" : "📊 View Visual Analytics"}
-        </button>
+        </Button>
       </div>
 
       {/* Expanded Charts Panel */}
       {showCharts && (
-        <div className="bg-white border border-gray-150 p-6 rounded-2xl shadow-sm grid md:grid-cols-3 gap-6 items-stretch animate-fadeIn">
+        <div className="grid md:grid-cols-3 gap-6 items-stretch animate-fadeIn">
           {/* Donut Chart: Status distribution */}
-          <div className="border rounded-xl p-4 flex flex-col items-center justify-between min-h-[300px]">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center w-full">Status Breakdown</h4>
+          <Card className="p-5 flex flex-col items-center justify-between min-h-[300px]">
+            <h4 className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider text-center w-full">Status Breakdown</h4>
             {pieData.length > 0 ? (
               <div className="w-full h-48 flex justify-center items-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -126,39 +144,47 @@ export default function StatBar({ jobs = [] }) {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} applications`, "Count"]} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: chartTheme.tooltipBg, 
+                        borderColor: chartTheme.tooltipBorder,
+                        borderRadius: "12px" 
+                      }} 
+                      itemStyle={{ color: chartTheme.tooltipText }}
+                      formatter={(value) => [`${value} applications`, "Count"]} 
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-xs text-gray-400 italic my-auto">No status records to display.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 italic my-auto">No status records to display.</p>
             )}
             
             {/* Custom Legend */}
             <div className="flex flex-wrap gap-2 justify-center mt-2">
               {pieData.map((entry, index) => (
-                <div key={index} className="flex items-center gap-1 text-[10px] font-semibold text-gray-600">
+                <div key={index} className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-slate-400">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: entry.color }} />
                   <span>{entry.name} ({entry.value})</span>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Area Chart: Applications timeline */}
-          <div className="border rounded-xl p-4 flex flex-col justify-between min-h-[300px] md:col-span-2">
-            <div className="flex justify-between items-center w-full border-b pb-2">
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Application Volume</h4>
-              <div className="flex bg-gray-100 rounded-lg p-0.5 border">
+          <Card className="p-5 flex flex-col justify-between min-h-[300px] md:col-span-2">
+            <div className="flex justify-between items-center w-full border-b border-gray-100 dark:border-slate-800 pb-2">
+              <h4 className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Application Volume</h4>
+              <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5 border dark:border-slate-700">
                 <button
                   onClick={() => setTimelinePeriod("day")}
-                  className={`text-[10px] font-bold px-2 py-1 rounded-md transition ${timelinePeriod === "day" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500"}`}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition ${timelinePeriod === "day" ? "bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-400 shadow-sm" : "text-gray-500 dark:text-slate-400"}`}
                 >
                   Day
                 </button>
                 <button
                   onClick={() => setTimelinePeriod("week")}
-                  className={`text-[10px] font-bold px-2 py-1 rounded-md transition ${timelinePeriod === "week" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500"}`}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition ${timelinePeriod === "week" ? "bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-400 shadow-sm" : "text-gray-500 dark:text-slate-400"}`}
                 >
                   Week
                 </button>
@@ -175,34 +201,41 @@ export default function StatBar({ jobs = [] }) {
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="date" tick={{ fontSize: 9 }} stroke="#9ca3af" />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 9 }} stroke="#9ca3af" />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="count" name="Applications" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorCount)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: chartTheme.text }} stroke={chartTheme.grid} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 9, fill: chartTheme.text }} stroke={chartTheme.grid} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: chartTheme.tooltipBg, 
+                        borderColor: chartTheme.tooltipBorder,
+                        borderRadius: "12px"
+                      }}
+                      itemStyle={{ color: chartTheme.tooltipText }}
+                    />
+                    <Area type="monotone" dataKey="count" name="Applications" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCount)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-xs text-gray-400 italic my-auto text-center">No dates recorded yet.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 italic my-auto text-center">No dates recorded yet.</p>
             )}
 
             {/* Stat Card: Interview conversion rate */}
-            <div className="mt-4 pt-3 border-t flex justify-between items-center px-2">
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex justify-between items-center px-2">
               <div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Interview Conversion Rate</span>
-                <span className="text-xs text-gray-500">Percentage of interviews converting to offers</span>
+                <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider block">Interview Conversion Rate</span>
+                <span className="text-xs text-gray-500 dark:text-slate-400">Percentage of interviews converting to offers</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-2xl font-black text-indigo-900 block">{interviewSuccessRate}%</span>
+                  <span className="text-2xl font-black text-slate-850 dark:text-slate-100 block">{interviewSuccessRate}%</span>
                 </div>
-                <div className="w-14 bg-gray-150 h-2 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(interviewSuccessRate, 100)}%` }} />
+                <div className="w-14 bg-gray-150 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(interviewSuccessRate, 100)}%` }} />
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

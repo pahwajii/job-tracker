@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react"
 import { api } from "../services/api"
+import Card from "../components/ui/Card"
+import Button from "../components/ui/Button"
+import Input from "../components/ui/Input"
 
 export default function ResumeAnalyzerPage() {
   const [resumeText, setResumeText] = useState("")
@@ -91,33 +94,33 @@ export default function ResumeAnalyzerPage() {
 
   // Helper for match score color classes
   const getScoreColor = (score) => {
-    if (score >= 80) return "text-emerald-600 bg-emerald-50 border-emerald-200"
-    if (score >= 50) return "text-amber-600 bg-amber-50 border-amber-200"
-    return "text-rose-600 bg-rose-50 border-rose-200"
+    if (score >= 80) return "text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/40"
+    if (score >= 50) return "text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/20 dark:border-amber-900/40"
+    return "text-rose-600 bg-rose-50 border-rose-200 dark:text-rose-400 dark:bg-rose-950/20 dark:border-rose-900/40"
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 transition-colors duration-300">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold text-indigo-900 mb-2">🔍 AI Resume Analyzer</h1>
-        <p className="text-gray-500 max-w-2xl mx-auto">Compare your resume against any job description to view match scores, extract missing keywords, and get custom tailored suggestions.</p>
+        <h1 className="text-4xl font-extrabold text-indigo-950 dark:text-white mb-2 tracking-tight">🔍 AI Resume Analyzer</h1>
+        <p className="text-gray-500 dark:text-slate-400 max-w-2xl mx-auto">Compare your resume against any job description to view match scores, extract missing keywords, and get custom tailored suggestions.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         {/* Input Controls */}
         <div className="space-y-6">
           {/* Resume Upload Form */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <Card className="p-6 space-y-4">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
               📄 1. Upload Resume (PDF)
             </h2>
             
             <form onSubmit={handleUploadResume} className="space-y-3">
               <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50/50 hover:bg-gray-50 transition">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-slate-800 rounded-xl cursor-pointer bg-gray-50/50 dark:bg-slate-900/30 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <span className="text-3xl mb-2">📤</span>
-                    <p className="text-xs text-gray-500 font-semibold">
+                    <p className="text-xs text-gray-500 dark:text-slate-450 font-bold">
                       {file ? file.name : "Click to select resume PDF (Max 5MB)"}
                     </p>
                   </div>
@@ -131,103 +134,101 @@ export default function ResumeAnalyzerPage() {
               </div>
 
               {uploadMessage.text && (
-                <div className={`p-3 rounded-lg text-xs font-semibold ${uploadMessage.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                <div className={`p-3 rounded-lg text-xs font-bold ${uploadMessage.type === "success" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
                   {uploadMessage.text}
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
-                disabled={uploading || !file}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="primary"
+                className="w-full py-2.5"
+                disabled={!file}
+                loading={uploading}
               >
-                {uploading ? "Extracting Text..." : "Upload & Extract"}
-              </button>
+                Upload & Extract
+              </Button>
             </form>
 
             <div className="pt-2">
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Resume Text (Direct Edit / Preview)</label>
-              <textarea
+              <Input
+                label="Resume Text (Direct Edit / Preview)"
+                id="resumeText"
+                as="textarea"
                 value={resumeText}
                 onChange={(e) => setResumeText(e.target.value)}
                 placeholder="Upload your resume above or paste your raw resume text here directly..."
-                className="w-full h-32 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs text-gray-600 bg-gray-50/50"
+                className="h-32"
               />
             </div>
-          </div>
+          </Card>
 
           {/* Job Description Form */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <Card className="p-6 space-y-4">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
               💼 2. Job Description
             </h2>
             <form onSubmit={handleAnalyze} className="space-y-4">
-              <div>
-                <textarea
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Paste the target job description here..."
-                  className="w-full h-48 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-800 bg-gray-50/50"
-                  required
-                />
-              </div>
+              <Input
+                id="jobDescription"
+                as="textarea"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste the target job description here..."
+                className="h-48"
+                required
+              />
 
               {analysisError && (
-                <div className="bg-red-50 text-red-700 p-3 rounded-lg text-xs font-semibold border-l-4 border-red-500">
+                <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-3 rounded-lg text-xs font-semibold border-l-4 border-red-500">
                   {analysisError}
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
-                disabled={analyzing}
-                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md hover:shadow-indigo-500/20 flex justify-center items-center gap-2 disabled:opacity-50"
+                variant="primary"
+                className="w-full py-3"
+                loading={analyzing}
               >
-                {analyzing ? (
-                  <>
-                    <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    Analyzing fit...
-                  </>
-                ) : (
-                  "✨ Run AI Analysis"
-                )}
-              </button>
+                ✨ Run AI Analysis
+              </Button>
             </form>
-          </div>
+          </Card>
         </div>
 
         {/* Results Panel */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm min-h-[500px]">
-          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+        <Card className="p-6 min-h-[500px]">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2 tracking-tight">
             📊 Analysis Report
           </h2>
 
           {!results && !analyzing && (
-            <div className="flex flex-col items-center justify-center text-center h-[350px] text-gray-400">
+            <div className="flex flex-col items-center justify-center text-center h-[350px] text-gray-400 dark:text-slate-550">
               <span className="text-5xl mb-4">🎯</span>
-              <p className="text-sm font-semibold">Your report will generate here.</p>
-              <p className="text-xs mt-1">Upload a resume, paste a job description, and click "Run AI Analysis".</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-slate-200">Your report will generate here.</p>
+              <p className="text-xs mt-1 text-gray-500 dark:text-slate-400">Upload a resume, paste a job description, and click "Run AI Analysis".</p>
             </div>
           )}
 
           {analyzing && (
             <div className="flex flex-col items-center justify-center text-center h-[350px] space-y-4">
               <span className="animate-spin inline-block w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full" />
-              <p className="text-sm font-semibold text-gray-600">DeepSeek AI is processing your resume...</p>
-              <p className="text-xs text-gray-400 max-w-xs">We are parsing key competencies, matching attributes, and identifying skill gaps.</p>
+              <p className="text-sm font-semibold text-gray-600 dark:text-slate-300">Google Gemini AI is processing your resume...</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 max-w-xs leading-relaxed">We are parsing key competencies, matching attributes, and identifying skill gaps.</p>
             </div>
           )}
 
           {results && (
             <div className="space-y-6 animate-fadeIn">
               {/* Score Display */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl border bg-gray-50/50">
+              <div className="flex items-center gap-4 p-4 rounded-2xl border border-gray-150 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-950/20">
                 <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center text-2xl font-black ${getScoreColor(results.matchScore)}`}>
                   {results.matchScore}%
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Match Compatibility</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <h3 className="text-lg font-bold text-gray-850 dark:text-slate-100">Match Compatibility</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                     {results.matchScore >= 80 
                       ? "Excellent fit! Your resume is strongly aligned with this role."
                       : results.matchScore >= 50
@@ -239,27 +240,27 @@ export default function ResumeAnalyzerPage() {
 
               {/* Missing Keywords */}
               <div>
-                <h3 className="text-sm font-bold text-gray-700 mb-2.5">🔍 Missing Keywords / Skill Gaps</h3>
+                <h3 className="text-sm font-bold text-gray-700 dark:text-slate-350 mb-2.5 uppercase tracking-wider">Missing Keywords / Skill Gaps</h3>
                 <div className="flex flex-wrap gap-2">
                   {results.missingKeywords && results.missingKeywords.length > 0 ? (
                     results.missingKeywords.map((word, i) => (
-                      <span key={i} className="bg-amber-50 text-amber-700 font-semibold px-3 py-1.5 rounded-xl text-xs border border-amber-200">
+                      <span key={i} className="bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 font-bold px-3 py-1.5 rounded-xl text-xs border border-amber-100 dark:border-amber-900/40">
                         {word}
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-green-600 italic">No major missing keywords found. Great job!</span>
+                    <span className="text-xs text-green-600 dark:text-green-400 italic">No major missing keywords found. Great job!</span>
                   )}
                 </div>
               </div>
 
               {/* Suggestions */}
               <div>
-                <h3 className="text-sm font-bold text-gray-700 mb-2.5">💡 Actionable Resume Enhancements</h3>
+                <h3 className="text-sm font-bold text-gray-700 dark:text-slate-350 mb-2.5 uppercase tracking-wider">Actionable Resume Enhancements</h3>
                 <ul className="space-y-3">
                   {results.tailoringSuggestions && results.tailoringSuggestions.map((tip, i) => (
-                    <li key={i} className="flex gap-2.5 text-xs text-gray-600 leading-relaxed items-start">
-                      <span className="text-indigo-600 mt-0.5">✔</span>
+                    <li key={i} className="flex gap-2.5 text-xs text-gray-600 dark:text-slate-300 leading-relaxed items-start">
+                      <span className="text-indigo-600 dark:text-indigo-400 mt-0.5">✔</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -267,7 +268,7 @@ export default function ResumeAnalyzerPage() {
               </div>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

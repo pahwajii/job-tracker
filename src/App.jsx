@@ -14,43 +14,45 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+    <div className="bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300 ease-in-out">
+      <Router>
+        <Navbar />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <JobTrackerPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profiles"
-          element={
-            <ProtectedRoute>
-              <ProfileLinksPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/resume-analyzer"
-          element={
-            <ProtectedRoute>
-              <ResumeAnalyzerPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* Protected Routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <JobTrackerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profiles"
+            element={
+              <ProtectedRoute>
+                <ProfileLinksPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/resume-analyzer"
+            element={
+              <ProtectedRoute>
+                <ResumeAnalyzerPage />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Fallback redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Fallback redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </div>
   )
 }
 

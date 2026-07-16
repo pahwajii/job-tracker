@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react"
 import { api } from "../services/api"
+import Input from "../components/ui/Input"
+import Button from "../components/ui/Button"
+import Card from "../components/ui/Card"
 
 export default function ProfileLinksPage() {
   const [links, setLinks] = useState({
@@ -57,44 +60,43 @@ export default function ProfileLinksPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mt-8">
-      <h1 className="text-3xl font-extrabold text-indigo-900 mb-2">🔗 Professional Links</h1>
-      <p className="text-gray-500 mb-6 text-sm">Save your profiles to customize resume analysis and job matching metrics</p>
+    <Card className="max-w-2xl mx-auto p-8 mt-8 border border-gray-200 dark:border-slate-800 transition-colors duration-300">
+      <h1 className="text-3xl font-extrabold text-indigo-950 dark:text-white mb-2 tracking-tight">🔗 Professional Links</h1>
+      <p className="text-gray-500 dark:text-slate-400 mb-6 text-sm">Save your profiles to customize resume analysis and job matching metrics</p>
       
       {message.text && (
-        <div className={`p-4 rounded-xl mb-6 text-sm ${message.type === "success" ? "bg-green-50 text-green-800 border-l-4 border-green-500" : "bg-red-50 text-red-800 border-l-4 border-red-500"}`}>
+        <div className={`p-4 rounded-xl mb-6 text-sm font-semibold border-l-4 ${message.type === "success" ? "bg-green-50 text-green-800 border-green-500 dark:bg-green-950/20 dark:text-green-400" : "bg-red-50 text-red-800 border-red-500 dark:bg-red-950/20 dark:text-red-400"}`}>
           {message.text}
         </div>
       )}
 
       <form onSubmit={handleSave} className="space-y-5">
         {["linkedin", "github", "leetcode", "portfolio"].map((key) => (
-          <div key={key}>
-            <label className="block mb-1.5 capitalize text-sm font-semibold text-gray-700">{key}</label>
-            <input
-              type="url"
-              name={key}
-              placeholder={`https://${key}.com/yourusername`}
-              value={links[key]}
-              onChange={handleChange}
-              className="w-full border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50/50 transition text-sm text-gray-800"
-            />
-          </div>
+          <Input
+            key={key}
+            label={key}
+            id={key}
+            name={key}
+            type="url"
+            placeholder={`https://${key}.com/yourusername`}
+            value={links[key]}
+            onChange={handleChange}
+          />
         ))}
 
         <div className="flex justify-end pt-2">
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl transition duration-200 shadow-md hover:shadow-indigo-500/20 disabled:opacity-50"
+            variant="primary"
+            loading={loading}
           >
-            {loading ? "Saving..." : "Save Profiles"}
-          </button>
+            Save Profiles
+          </Button>
         </div>
       </form>
 
-      <div className="mt-8 pt-6 border-t border-gray-100 space-y-3">
-        <h2 className="text-lg font-bold text-indigo-950">🌐 Profile Preview:</h2>
+      <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-850 space-y-3">
+        <h2 className="text-lg font-bold text-indigo-950 dark:text-white tracking-tight">🌐 Profile Preview:</h2>
         <div className="flex flex-wrap gap-3">
           {Object.entries(links).map(([key, value]) => (
             value && (
@@ -103,7 +105,7 @@ export default function ProfileLinksPage() {
                 href={value}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 font-semibold px-4 py-2 rounded-xl text-xs hover:bg-indigo-100 transition duration-150"
+                className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-slate-850 dark:hover:bg-slate-800 dark:text-indigo-400 font-bold px-4 py-2 rounded-xl text-xs transition duration-150 border dark:border-slate-700"
               >
                 <span>{key === "linkedin" ? "💼" : key === "github" ? "💻" : key === "leetcode" ? "🧠" : "🌐"}</span>
                 <span className="capitalize">{key}</span>
@@ -111,10 +113,10 @@ export default function ProfileLinksPage() {
             )
           ))}
           {!Object.values(links).some(Boolean) && (
-            <p className="text-sm text-gray-400 italic">No profiles added yet.</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500 italic">No profiles added yet.</p>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
