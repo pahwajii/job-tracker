@@ -215,5 +215,29 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ jobId })
     })
+  },
+
+  // Resume Tailoring API
+  tailorResume: async (jobId) => {
+    return request("/resume/tailor", {
+      method: "POST",
+      body: JSON.stringify({ jobId })
+    })
+  },
+
+  getTailoredHistories: async (jobId) => {
+    return request(`/resume/tailor/${jobId}`)
+  },
+
+  downloadTailoredFile: async (id, fileType) => {
+    const token = localStorage.getItem("token")
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+    const response = await fetch(`${baseUrl}/resume/download/${fileType}/${id}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
+    if (!response.ok) throw new Error("Failed to download file")
+    return await response.blob()
   }
 }
