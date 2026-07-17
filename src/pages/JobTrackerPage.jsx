@@ -64,6 +64,10 @@ export default function JobTrackerPage() {
     checklist: []
   })
 
+  // Playwright Auto-Apply execution states
+  const [automating, setAutomating] = useState(false)
+  const [autoMessage, setAutoMessage] = useState("")
+
   // Calendar View month configurations
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
@@ -78,6 +82,7 @@ export default function JobTrackerPage() {
 
   const openCreateModal = () => {
     setSelectedJob(null)
+    setAutoMessage("")
     setModalData({
       company: "",
       role: "",
@@ -102,6 +107,7 @@ export default function JobTrackerPage() {
 
   const openEditModal = (job) => {
     setSelectedJob(job)
+    setAutoMessage("")
     setModalData({
       company: job.company || "",
       role: job.role || "",
@@ -128,7 +134,6 @@ export default function JobTrackerPage() {
     e.preventDefault()
     try {
       if (selectedJob) {
-        // Save updates directly via API to support all new CRM properties
         const updated = await api.updateJob(selectedJob._id, modalData)
         setJobs(prev => prev.map(j => j._id === selectedJob._id ? updated : j))
       } else {
@@ -311,7 +316,7 @@ export default function JobTrackerPage() {
               className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
                 activeTab === tab
                   ? "bg-indigo-650 text-white shadow"
-                  : "text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white"
+                  : "text-gray-550 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white"
               }`}
             >
               {tab === "kanban" && "📋 Kanban Board"}
@@ -366,7 +371,7 @@ export default function JobTrackerPage() {
                         : "bg-gray-50/40 border-gray-150 dark:bg-slate-900/10 dark:border-slate-850"
                     }`}
                   >
-                    <div className="flex justify-between items-center mb-3.5 pb-2 border-b dark:border-slate-850">
+                    <div className="flex justify-between items-center mb-3.5 pb-2 border-b dark:border-slate-855">
                       <span className="text-[10px] font-black uppercase text-gray-500 dark:text-slate-400 block tracking-wide">
                         {STATUS_CONFIG[status]?.label}
                       </span>
@@ -400,7 +405,7 @@ export default function JobTrackerPage() {
                           )}
 
                           {job.timeline && job.timeline.length > 0 && (
-                            <div className="text-[8px] font-bold text-amber-600 mt-2 bg-amber-50/50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded inline-block">
+                            <div className="text-[8px] font-bold text-amber-600 mt-2 bg-amber-50/50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded inline-block ml-1">
                               📅 {job.timeline.length} Events
                             </div>
                           )}
@@ -475,7 +480,6 @@ export default function JobTrackerPage() {
           {/* TAB 3: CALENDAR VIEW */}
           {activeTab === "calendar" && (
             <div className="space-y-6">
-              {/* Calendar Month Header */}
               <div className="flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/30 border dark:border-slate-800 rounded-2xl p-4">
                 <Button variant="secondary" size="sm" onClick={handlePrevMonth}>
                   ◀ Previous Month
@@ -488,9 +492,7 @@ export default function JobTrackerPage() {
                 </Button>
               </div>
 
-              {/* Grid Cells */}
               <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold">
-                {/* Weekday titles */}
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                   <div key={day} className="text-gray-400 py-2 border-b dark:border-slate-800">
                     {day}
@@ -503,14 +505,13 @@ export default function JobTrackerPage() {
                     <div
                       key={idx}
                       className={`min-h-[90px] border dark:border-slate-850 rounded-xl p-1.5 flex flex-col items-stretch text-left transition ${
-                        day ? "bg-white dark:bg-slate-900" : "bg-gray-50/30 dark:bg-slate-950/10 border-dashed"
+                        day ? "bg-white dark:bg-slate-900" : "bg-gray-50/30 dark:bg-slate-955/10 border-dashed"
                       }`}
                     >
                       <span className={`text-[10px] font-bold ${day ? "text-gray-500 dark:text-slate-400" : "text-transparent"}`}>
                         {day || ""}
                       </span>
 
-                      {/* Day Events listing */}
                       <div className="space-y-1.5 mt-1 overflow-y-auto max-h-[70px]">
                         {dayEvents.map(({ job, event }, i) => (
                           <div
@@ -533,7 +534,6 @@ export default function JobTrackerPage() {
           {/* TAB 4: ANALYTICS DASHBOARD */}
           {activeTab === "analytics" && (
             <div className="grid md:grid-cols-3 gap-6">
-              {/* Funnel chart status counts */}
               <Card className="p-5 border dark:border-slate-800 md:col-span-2 space-y-4">
                 <h3 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-wider">Conversion Stages</h3>
                 
@@ -559,21 +559,19 @@ export default function JobTrackerPage() {
                 </div>
               </Card>
 
-              {/* Statistics Sidebar cards */}
               <div className="space-y-6">
-                {/* Expected Salary range details */}
                 <Card className="p-5 border dark:border-slate-800 space-y-3">
-                  <h3 className="text-sm font-black text-gray-850 dark:text-white uppercase tracking-wider">Salary Statistics</h3>
+                  <h3 className="text-sm font-black text-gray-855 dark:text-white uppercase tracking-wider">Salary Statistics</h3>
                   
                   <div className="grid grid-cols-2 gap-4 text-center items-center">
                     <div className="p-3 bg-gray-50 dark:bg-slate-950/20 rounded-xl border dark:border-slate-850">
-                      <span className="text-[9px] uppercase font-black text-gray-450">Average</span>
+                      <span className="text-[9px] uppercase font-black text-gray-455">Average</span>
                       <p className="text-sm font-black text-indigo-950 dark:text-white mt-0.5">
                         {averages.avg > 0 ? `$${averages.avg.toLocaleString()}` : "$0"}
                       </p>
                     </div>
                     <div className="p-3 bg-gray-50 dark:bg-slate-950/20 rounded-xl border dark:border-slate-850">
-                      <span className="text-[9px] uppercase font-black text-gray-450">Max Expected</span>
+                      <span className="text-[9px] uppercase font-black text-gray-455">Max Expected</span>
                       <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
                         {averages.max > 0 ? `$${averages.max.toLocaleString()}` : "$0"}
                       </p>
@@ -581,11 +579,10 @@ export default function JobTrackerPage() {
                   </div>
                 </Card>
 
-                {/* Work location breakdown stats */}
                 <Card className="p-5 border dark:border-slate-800 space-y-4">
-                  <h3 className="text-sm font-black text-gray-850 dark:text-white uppercase tracking-wider">Location Mix</h3>
+                  <h3 className="text-sm font-black text-gray-855 dark:text-white uppercase tracking-wider">Location Mix</h3>
                   
-                  <div className="space-y-2.5 text-xs font-bold text-gray-650 dark:text-slate-350">
+                  <div className="space-y-2.5 text-xs font-bold text-gray-655 dark:text-slate-350">
                     <div className="flex justify-between items-center">
                       <span>Remote</span>
                       <span className="font-extrabold text-indigo-650">{workModes.remote} Jobs</span>
@@ -610,23 +607,23 @@ export default function JobTrackerPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-scaleIn">
-            <div className="flex justify-between items-center border-b dark:border-slate-850 pb-4 mb-6">
+            <div className="flex justify-between items-center border-b dark:border-slate-855 pb-4 mb-6">
               <div>
                 <h3 className="text-lg font-black text-indigo-950 dark:text-white">
                   {selectedJob ? "📝 Edit Application Details" : "➕ Catalog New Job Application"}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Keep application parameters updated for accurate funnel stats.</p>
+                <p className="text-xs text-gray-550 dark:text-slate-400">Keep application parameters updated for accurate funnel stats.</p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-gray-700 dark:hover:text-white text-xl font-bold"
+                aria-label="Close modal"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleModalSave} className="space-y-6">
-              {/* Grid columns */}
               <div className="grid md:grid-cols-3 gap-5">
                 <Input
                   label="Role Title"
@@ -679,8 +676,49 @@ export default function JobTrackerPage() {
                 />
               </div>
 
-              {/* CRM Additional Fields */}
-              <div className="border-t dark:border-slate-850 pt-5 space-y-4">
+              {/* PLAYWRIGHT AUTO-APPLY CONSOLE PANEL */}
+              {selectedJob && modalData.url && (
+                <div className="border-t dark:border-slate-855 pt-5 space-y-4 bg-indigo-50/5 dark:bg-slate-950/10 p-5 rounded-2xl border dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-black text-indigo-950 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                        🚀 Playwright Form Auto-Filler
+                      </h4>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Prefill details (name, links, resume upload, AI answers) in a headed browser window.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={async () => {
+                        setAutomating(true)
+                        setAutoMessage("Launching Playwright Chrome headed browser...")
+                        try {
+                          const res = await api.automateApply(selectedJob._id)
+                          setAutoMessage(res.message || "Automation process finished.")
+                          fetchJobs()
+                        } catch (err) {
+                          setAutoMessage(err.message || "Automation triggered with errors.")
+                          fetchJobs()
+                        } finally {
+                          setAutomating(false)
+                        }
+                      }}
+                      loading={automating}
+                      className="text-xs font-bold px-4 py-2.5 bg-indigo-650"
+                    >
+                      🚀 Open & Prefill Form
+                    </Button>
+                  </div>
+
+                  {autoMessage && (
+                    <div className="bg-indigo-50/40 border border-indigo-100 dark:bg-slate-900/50 dark:border-slate-800 p-3.5 rounded-xl text-xs leading-relaxed text-indigo-955 dark:text-indigo-400 font-semibold border-l-4 border-l-indigo-600">
+                      {autoMessage}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="border-t dark:border-slate-855 pt-5 space-y-4">
                 <h4 className="text-xs font-black text-indigo-950 dark:text-white uppercase tracking-wider">Recruiter & Outreach Contacts</h4>
                 <div className="grid md:grid-cols-3 gap-5">
                   <Input
@@ -726,11 +764,9 @@ export default function JobTrackerPage() {
                 </div>
               </div>
 
-              {/* TIMELINE EVENT BUILDER */}
-              <div className="border-t dark:border-slate-850 pt-5 space-y-4">
+              <div className="border-t dark:border-slate-855 pt-5 space-y-4">
                 <h4 className="text-xs font-black text-indigo-950 dark:text-white uppercase tracking-wider">Timeline Milestones ({modalData.timeline.length})</h4>
                 
-                {/* Saved list */}
                 <div className="space-y-2">
                   {modalData.timeline.map((event, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs bg-gray-50 dark:bg-slate-950/20 p-3.5 rounded-xl border dark:border-slate-850">
@@ -750,7 +786,6 @@ export default function JobTrackerPage() {
                   ))}
                 </div>
 
-                {/* Event creation fields */}
                 <div className="grid md:grid-cols-3 gap-4 items-end bg-gray-50/30 dark:bg-slate-950/10 p-4 border border-dashed dark:border-slate-850 rounded-2xl">
                   <Input
                     label="Event Title"
@@ -780,7 +815,6 @@ export default function JobTrackerPage() {
                 </div>
               </div>
 
-              {/* Description & Notes */}
               <div className="grid md:grid-cols-2 gap-5">
                 <Input
                   label="Job Description details"
@@ -798,8 +832,7 @@ export default function JobTrackerPage() {
                 />
               </div>
 
-              {/* Save / Delete handles */}
-              <div className="flex justify-between items-center border-t dark:border-slate-850 pt-5">
+              <div className="flex justify-between items-center border-t dark:border-slate-855 pt-5">
                 {selectedJob ? (
                   <button
                     type="button"

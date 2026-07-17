@@ -289,5 +289,13 @@ export const api = {
     return request(`/prep/${id}`, {
       method: "DELETE"
     })
+  },
+
+  // Playwright Browser Automation API
+  automateApply: async (jobId) => {
+    return request("/automate/apply", {
+      method: "POST",
+      body: JSON.stringify({ jobId })
+    })
   }
 }
