@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import Navbar from "./components/Navbar"
 import JobTrackerPage from "./pages/JobTrackerPage"
-import ProfileLinksPage from "./pages/ProfileLinkspage"
+import ProfilePage from "./pages/ProfilePage"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import ResumeAnalyzerPage from "./pages/ResumeAnalyzerPage"
@@ -35,7 +35,7 @@ function App() {
             path="/profiles"
             element={
               <ProtectedRoute>
-                <ProfileLinksPage />
+                <ProfilePage />
               </ProtectedRoute>
             }
           />

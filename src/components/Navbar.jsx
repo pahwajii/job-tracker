@@ -40,7 +40,7 @@ export default function Navbar() {
               🗂 Job Tracker
             </Link>
             <Link to="/profiles" className={linkStyles("/profiles")}>
-              🔗 Professional Links
+              👤 Master Profile
             </Link>
             <Link to="/resume-analyzer" className={linkStyles("/resume-analyzer")}>
               🔍 Resume Analyzer

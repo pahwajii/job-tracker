@@ -114,17 +114,35 @@ export const api = {
     return request("/jobs/analytics")
   },
 
-  // Profile Links API
-  updateProfileLinks: async (links) => {
-    return request("/profile-links", {
+  // Master Career Profile API
+  getProfile: async () => {
+    return request("/profile")
+  },
+
+  updateProfile: async (profileData) => {
+    return request("/profile", {
       method: "PUT",
-      body: JSON.stringify(links)
+      body: JSON.stringify(profileData)
     })
   },
 
-  // Resume Upload API
+  uploadResumeFile: async (formData) => {
+    return request("/profile/upload-resume", {
+      method: "POST",
+      body: formData
+    })
+  },
+
+  uploadPortfolioFile: async (formData) => {
+    return request("/profile/upload-portfolio", {
+      method: "POST",
+      body: formData
+    })
+  },
+
+  // Backward compatibility aliases
   uploadResume: async (formData) => {
-    return request("/resume/upload", {
+    return request("/profile/upload-resume", {
       method: "POST",
       body: formData
     })
