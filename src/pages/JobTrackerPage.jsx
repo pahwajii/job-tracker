@@ -354,7 +354,7 @@ export default function JobTrackerPage() {
         <>
           {/* TAB 1: KANBAN BOARD */}
           {activeTab === "kanban" && (
-            <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4 items-start overflow-x-auto pb-6">
+            <div className="flex gap-4 items-start overflow-x-auto pb-6 scrollbar-thin select-none max-w-full">
               {STATUSES.map(status => {
                 const columnJobs = filteredJobs.filter(j => j.status === status)
                 const isOver = draggedOverColumn === status
@@ -365,13 +365,13 @@ export default function JobTrackerPage() {
                     onDragOver={(e) => handleDragOver(e, status)}
                     onDragLeave={() => setDraggedOverColumn(null)}
                     onDrop={(e) => handleDrop(e, status)}
-                    className={`rounded-2xl p-3 min-w-[200px] border transition duration-200 ${
+                    className={`rounded-2xl p-4 w-72 flex-shrink-0 border transition duration-200 ${
                       isOver
                         ? "bg-indigo-50/50 border-indigo-300 dark:bg-indigo-950/10 dark:border-indigo-800"
-                        : "bg-gray-50/40 border-gray-150 dark:bg-slate-900/10 dark:border-slate-850"
+                        : "bg-gray-50/40 border-gray-200 dark:bg-slate-900/40 dark:border-slate-800"
                     }`}
                   >
-                    <div className="flex justify-between items-center mb-3.5 pb-2 border-b dark:border-slate-855">
+                    <div className="flex justify-between items-center mb-3.5 pb-2 border-b dark:border-slate-800">
                       <span className="text-[10px] font-black uppercase text-gray-500 dark:text-slate-400 block tracking-wide">
                         {STATUS_CONFIG[status]?.label}
                       </span>
@@ -393,7 +393,7 @@ export default function JobTrackerPage() {
                           <p className="text-[10px] font-bold text-gray-450 dark:text-slate-400 mt-0.5">{job.company}</p>
                           
                           {job.location && (
-                            <span className="inline-block text-[9px] font-bold text-gray-400 mt-2 bg-gray-50 dark:bg-slate-950/30 px-1.5 py-0.5 rounded border dark:border-slate-850">
+                            <span className="inline-block text-[9px] font-bold text-gray-400 mt-2 bg-gray-50 dark:bg-slate-950/30 px-1.5 py-0.5 rounded border dark:border-slate-800">
                               📍 {job.location}
                             </span>
                           )}
