@@ -239,5 +239,55 @@ export const api = {
     })
     if (!response.ok) throw new Error("Failed to download file")
     return await response.blob()
+  },
+
+  // Outreach & Cover Letter API
+  generateOutreach: async (jobId, type, tone) => {
+    return request("/ai/outreach/generate", {
+      method: "POST",
+      body: JSON.stringify({ jobId, type, tone })
+    })
+  },
+
+  saveOutreach: async (outreachData) => {
+    return request("/ai/outreach/save", {
+      method: "POST",
+      body: JSON.stringify(outreachData)
+    })
+  },
+
+  getOutreachHistories: async (jobId) => {
+    return request(`/ai/outreach/${jobId}`)
+  },
+
+  deleteOutreach: async (id) => {
+    return request(`/ai/outreach/${id}`, {
+      method: "DELETE"
+    })
+  },
+
+  // Interview Preparation API
+  generatePrep: async (jobId) => {
+    return request("/prep/generate", {
+      method: "POST",
+      body: JSON.stringify({ jobId })
+    })
+  },
+
+  getPrep: async (jobId) => {
+    return request(`/prep/${jobId}`)
+  },
+
+  updatePrep: async (id, sections) => {
+    return request(`/prep/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ sections })
+    })
+  },
+
+  deletePrep: async (id) => {
+    return request(`/prep/${id}`, {
+      method: "DELETE"
+    })
   }
 }

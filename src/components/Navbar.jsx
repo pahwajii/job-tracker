@@ -45,6 +45,9 @@ export default function Navbar() {
             <Link to="/resume-analyzer" className={linkStyles("/resume-analyzer")}>
               🔍 Resume Analyzer
             </Link>
+            <Link to="/prep" className={linkStyles("/prep")}>
+              🗣 Interview Prep
+            </Link>
           </div>
         )}
         

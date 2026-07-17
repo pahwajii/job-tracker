@@ -5,6 +5,7 @@ import ProfilePage from "./pages/ProfilePage"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import ResumeAnalyzerPage from "./pages/ResumeAnalyzerPage"
+import InterviewPrepPage from "./pages/InterviewPrepPage"
 
 // Simple Auth Guard
 const ProtectedRoute = ({ children }) => {
@@ -44,6 +45,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ResumeAnalyzerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/prep"
+            element={
+              <ProtectedRoute>
+                <InterviewPrepPage />
               </ProtectedRoute>
             }
           />
