@@ -43,6 +43,97 @@ export default function ProfilePage() {
   const [newRolePref, setNewRolePref] = useState("")
   const [newLocPref, setNewLocPref] = useState("")
 
+  // AI Profile Builder States
+  const [buildingProfile, setBuildingProfile] = useState(false)
+  const [pipelineStatus, setPipelineStatus] = useState([
+    { id: "resume", label: "Reading Resume...", status: "pending", detail: "" },
+    { id: "github", label: "Analyzing GitHub...", status: "pending", detail: "" },
+    { id: "portfolio", label: "Reading Portfolio...", status: "pending", detail: "" },
+    { id: "linkedin", label: "Reading LinkedIn...", status: "pending", detail: "" },
+    { id: "coding", label: "Analyzing Coding Profiles...", status: "pending", detail: "" },
+    { id: "merge", label: "Generating Skills...", status: "pending", detail: "" },
+    { id: "save", label: "Building Career Profile...", status: "pending", detail: "" }
+  ])
+
+  const handleBuildAIProfile = async () => {
+    setBuildingProfile(true)
+    setMessage({ text: "", type: "" })
+    
+    // Reset pipeline statuses
+    setPipelineStatus([
+      { id: "resume", label: "Reading Resume...", status: "pending", detail: "" },
+      { id: "github", label: "Analyzing GitHub...", status: "pending", detail: "" },
+      { id: "portfolio", label: "Reading Portfolio...", status: "pending", detail: "" },
+      { id: "linkedin", label: "Reading LinkedIn...", status: "pending", detail: "" },
+      { id: "coding", label: "Analyzing Coding Profiles...", status: "pending", detail: "" },
+      { id: "merge", label: "Generating Skills...", status: "pending", detail: "" },
+      { id: "save", label: "Building Career Profile...", status: "pending", detail: "" }
+    ])
+
+    try {
+      await api.buildProfileStream((chunk) => {
+        const { stage, message, data } = chunk
+        
+        if (stage === "error") {
+          throw new Error(message)
+        }
+
+        setPipelineStatus(prev => prev.map(step => {
+          if (step.id === stage) {
+            return { ...step, status: "loading", detail: message }
+          }
+          const order = ["resume", "github", "portfolio", "linkedin", "coding", "merge", "save", "done"]
+          const stepIdx = order.indexOf(step.id)
+          const stageIdx = order.indexOf(stage)
+          
+          if (stepIdx < stageIdx) {
+            return { ...step, status: "success", detail: step.id === stage ? message : (step.detail || "Completed") }
+          }
+          
+          return step
+        }))
+
+        if (stage === "done" && data) {
+          setProfile({
+            name: data.name || "",
+            phone: data.phone || "",
+            headline: data.headline || "",
+            bio: data.bio || "",
+            profileLinks: data.profileLinks || { linkedin: "", github: "", leetcode: "", portfolio: "" },
+            codingProfiles: data.codingProfiles || { leetcode: "", codechef: "", github: "", linkedin: "", portfolio: "" },
+            education: data.education || [],
+            experience: data.experience || [],
+            projects: data.projects || [],
+            certifications: data.certifications || [],
+            skills: data.skills || [],
+            careerPreferences: data.careerPreferences || { targetRoles: [], preferredLocations: [], jobTypes: [] },
+            resumeFileName: data.resumeFileName || "",
+            portfolioFileName: data.portfolioFileName || ""
+          })
+          
+          updateUserCache({
+            name: data.name,
+            profileLinks: data.profileLinks,
+            resumeText: data.resumeText
+          })
+
+          showToast("AI Master Career Profile generated successfully!", "success")
+          setBuildingProfile(false)
+        }
+      })
+    } catch (err) {
+      console.error(err)
+      showToast(err.message || "Failed to build AI Career Profile.", "error")
+      setPipelineStatus(prev => prev.map(step => {
+        if (step.status === "loading" || step.status === "pending") {
+          return { ...step, status: "error", detail: "Failed" }
+        }
+        return step
+      }))
+      setBuildingProfile(false)
+    }
+  }
+
   // Fetch complete profile on mount
   useEffect(() => {
     const loadProfile = async () => {
@@ -234,9 +325,21 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 pb-16 transition-colors duration-300">
-      <div className="mb-6">
-        <h1 className="text-3xl font-extrabold text-indigo-950 dark:text-white tracking-tight">👤 Master Career Profile</h1>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Configure your personal credentials, project histories, skills, and target job preferences.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b dark:border-slate-850 pb-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-indigo-950 dark:text-white tracking-tight">👤 Master Career Profile</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Configure your personal credentials, project histories, skills, and target job preferences.</p>
+        </div>
+        <div>
+          <Button
+            variant="primary"
+            className="flex items-center gap-1.5 shadow-sm font-bold bg-indigo-650 text-white hover:bg-indigo-700"
+            onClick={handleBuildAIProfile}
+            disabled={buildingProfile}
+          >
+            ✨ Build AI Profile
+          </Button>
+        </div>
       </div>
 
       {message.text && (
@@ -651,6 +754,41 @@ export default function ProfilePage() {
           </Card>
         </div>
       </div>
+
+      {/* AI Profile Builder Pipeline Modal Overlay */}
+      {buildingProfile && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full p-6 space-y-4 shadow-2xl animate-scaleUp">
+            <h3 className="text-lg font-bold text-indigo-950 dark:text-white flex items-center gap-2">
+              ✨ AI Profile Builder Pipeline
+            </h3>
+            <p className="text-xs text-gray-550">
+              CareerOS is compiling your Master Career Profile by parsing your resume, coding profiles, socials, and website data using Gemini.
+            </p>
+            
+            <div className="space-y-3 pt-2">
+              {pipelineStatus.map(step => (
+                <div key={step.id} className="flex items-start justify-between gap-3 text-xs">
+                  <div className="flex gap-2.5 items-center">
+                    <span>
+                      {step.status === "success" && "✅"}
+                      {step.status === "loading" && "⏳"}
+                      {step.status === "error" && "❌"}
+                      {step.status === "pending" && "⚪"}
+                    </span>
+                    <span className={`font-bold ${step.status === "loading" ? "text-indigo-650 dark:text-indigo-400" : "text-gray-650 dark:text-slate-350"}`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 italic text-right max-w-[180px] truncate">
+                    {step.detail}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,25 +8,40 @@ import FileUpload from "../components/ui/FileUpload"
 import LoadingSpinner from "../components/ui/LoadingSpinner"
 
 export default function ResumeAnalyzerPage() {
+  const [matchMode, setMatchMode] = useState("profile") // "profile" or "text"
   const [resumeText, setResumeText] = useState("")
   const [jobDescription, setJobDescription] = useState("")
   const [file, setFile] = useState(null)
   const [message, setMessage] = useState({ text: "", type: "" })
+  const [hasProfile, setHasProfile] = useState(false)
 
   // Use useAsync hook to manage parsing/analysis async states
-  const uploadAsync = useAsync(api.uploadResume)
-  const analyzeAsync = useAsync(api.analyzeResume)
+  const uploadAsync = useAsync(api.uploadResumeFile)
+  const analyzeTextAsync = useAsync(api.analyzeResume)
+  const analyzeProfileAsync = useAsync(api.matchAnalyze)
 
-  // Load user's cached resume text on mount
+  // Load user's cached profile check & resume text on mount
   useEffect(() => {
     const userStr = localStorage.getItem("user")
     if (userStr) {
       const user = JSON.parse(userStr)
       if (user.resumeText) {
         setResumeText(user.resumeText)
-        setMessage({ text: "Loaded previously uploaded resume text.", type: "success" })
       }
     }
+
+    // Check if user has active Master Profile details set
+    const fetchProfileCheck = async () => {
+      try {
+        const data = await api.getProfile()
+        if (data && (data.skills?.length > 0 || data.experience?.length > 0 || data.projects?.length > 0)) {
+          setHasProfile(true)
+        }
+      } catch (err) {
+        console.error("Profile check failed:", err)
+      }
+    }
+    fetchProfileCheck()
   }, [])
 
   const handleUploadResume = async (e) => {
@@ -40,18 +55,7 @@ export default function ResumeAnalyzerPage() {
 
     try {
       const data = await uploadAsync.execute(formData)
-      
-      // Update local state
       setResumeText(data.resumeText || "")
-      
-      // Update cache
-      const userStr = localStorage.getItem("user")
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        user.resumeText = data.resumeText || ""
-        localStorage.setItem("user", JSON.stringify(user))
-      }
-
       setMessage({ text: "Resume uploaded and text extracted successfully!", type: "success" })
       setFile(null)
     } catch (err) {
@@ -59,97 +63,153 @@ export default function ResumeAnalyzerPage() {
     }
   }
 
-  const handleAnalyze = async (e) => {
+  const handleRunAnalysis = async (e) => {
     e.preventDefault()
     if (!jobDescription.trim()) return
-    
+
     try {
-      await analyzeAsync.execute(resumeText, jobDescription)
+      if (matchMode === "profile") {
+        await analyzeProfileAsync.execute(jobDescription)
+      } else {
+        await analyzeTextAsync.execute(resumeText, jobDescription)
+      }
     } catch (err) {
       console.error(err)
     }
   }
 
   const getScoreColor = (score) => {
-    if (score >= 80) return "text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/40"
-    if (score >= 50) return "text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/20 dark:border-amber-900/40"
-    return "text-rose-600 bg-rose-50 border-rose-200 dark:text-rose-400 dark:bg-rose-950/20 dark:border-rose-900/40"
+    if (score >= 80) return "text-emerald-500 stroke-emerald-500 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/40"
+    if (score >= 50) return "text-amber-500 stroke-amber-500 bg-amber-50 border-amber-100 dark:text-amber-400 dark:bg-amber-950/20 dark:border-amber-900/40"
+    return "text-rose-500 stroke-rose-500 bg-rose-50 border-rose-100 dark:text-rose-400 dark:bg-rose-950/20 dark:border-rose-900/40"
   }
 
+  const activeData = matchMode === "profile" ? analyzeProfileAsync.data : analyzeTextAsync.data
+  const activeLoading = matchMode === "profile" ? analyzeProfileAsync.loading : analyzeTextAsync.loading
+  const activeError = matchMode === "profile" ? analyzeProfileAsync.error : analyzeTextAsync.error
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 transition-colors duration-300">
+    <div className="max-w-6xl mx-auto px-4 py-8 transition-colors duration-300">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold text-indigo-950 dark:text-white mb-2 tracking-tight">🔍 AI Resume Analyzer</h1>
-        <p className="text-gray-500 dark:text-slate-400 max-w-2xl mx-auto">Compare your resume against any job description to view match scores, extract missing keywords, and get custom tailored suggestions.</p>
+        <h1 className="text-4xl font-extrabold text-indigo-950 dark:text-white mb-2 tracking-tight">🔍 AI Match Engine</h1>
+        <p className="text-gray-550 dark:text-slate-400 max-w-2xl mx-auto">Evaluate profile compatibility against target job descriptions using DeepSeek R1 gap analyses.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 items-start">
-        {/* Input Panel */}
-        <div className="space-y-6">
-          {/* Resume Upload section using new FileUpload */}
-          <Card className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
-              📄 1. Upload Resume (PDF)
-            </h2>
-            
-            <div className="space-y-4">
-              <FileUpload
-                onFileSelect={setFile}
-                uploading={uploadAsync.loading}
-                accept=".pdf"
-                helperText="Select or drag resume PDF file here (Max 5MB)"
-              />
+      {/* Match Mode Selection Tab Bar */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 p-1.5 rounded-2xl flex gap-1.5 shadow-sm">
+          <button
+            onClick={() => {
+              setMatchMode("profile")
+              setMessage({ text: "", type: "" })
+            }}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              matchMode === "profile"
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-900 dark:text-slate-450 dark:hover:text-white"
+            }`}
+          >
+            👤 Use Master Profile {hasProfile && "✨"}
+          </button>
+          <button
+            onClick={() => {
+              setMatchMode("text")
+              setMessage({ text: "", type: "" })
+            }}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              matchMode === "text"
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-900 dark:text-slate-450 dark:hover:text-white"
+            }`}
+          >
+            📄 Use Custom PDF / Text
+          </button>
+        </div>
+      </div>
 
-              {message.text && (
-                <div className={`p-3 rounded-lg text-xs font-bold ${message.type === "success" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
-                  {message.text}
+      <div className="grid lg:grid-cols-5 gap-8 items-start">
+        {/* Input Panel (Cols: 2) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* OPTION A: Master profile details check */}
+          {matchMode === "profile" && (
+            <Card className="p-5 border dark:border-slate-800 space-y-3.5">
+              <h2 className="text-md font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                👤 Stored Career Profile
+              </h2>
+              {hasProfile ? (
+                <div className="p-3.5 rounded-xl bg-green-50/50 dark:bg-green-950/10 border border-green-100 dark:border-green-900/30 text-xs font-semibold text-green-700 dark:text-green-400">
+                  Ready! Master profile detected containing skill tags, experiences, and project lists.
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  No comprehensive profile found. Please configure your profile first or use the "AI Profile Builder" inside the Master Profile page.
                 </div>
               )}
+            </Card>
+          )}
 
-              {file && (
-                <Button
-                  variant="primary"
-                  className="w-full py-2.5"
-                  onClick={handleUploadResume}
-                  loading={uploadAsync.loading}
-                >
-                  Upload & Extract
-                </Button>
-              )}
-            </div>
+          {/* OPTION B: Raw text resume fields */}
+          {matchMode === "text" && (
+            <Card className="p-5 border dark:border-slate-800 space-y-4">
+              <h2 className="text-md font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                📄 Custom Resume PDF Upload
+              </h2>
+              
+              <div className="space-y-4">
+                <FileUpload
+                  onFileSelect={setFile}
+                  uploading={uploadAsync.loading}
+                  accept=".pdf"
+                  helperText="Drop resume PDF file here"
+                />
 
-            <div className="pt-2">
+                {message.text && (
+                  <div className={`p-3 rounded-lg text-xs font-bold ${message.type === "success" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
+                    {message.text}
+                  </div>
+                )}
+
+                {file && (
+                  <Button
+                    variant="primary"
+                    className="w-full py-2.5"
+                    onClick={handleUploadResume}
+                    loading={uploadAsync.loading}
+                  >
+                    Extract PDF Text
+                  </Button>
+                )}
+              </div>
+
               <Input
-                label="Resume Text (Direct Edit / Preview)"
-                id="resumeText"
+                label="Raw Resume Content (Editable Preview)"
                 as="textarea"
                 value={resumeText}
                 onChange={(e) => setResumeText(e.target.value)}
-                placeholder="Upload your resume above or paste your raw resume text here directly..."
-                className="h-32"
+                placeholder="Upload PDF above or paste resume content directly here..."
+                className="h-28 text-xs font-medium"
               />
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Job Description Card */}
-          <Card className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
-              💼 2. Job Description
+          <Card className="p-5 border dark:border-slate-800 space-y-4">
+            <h2 className="text-md font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              💼 Target Job Description
             </h2>
-            <form onSubmit={handleAnalyze} className="space-y-4">
+            <form onSubmit={handleRunAnalysis} className="space-y-4">
               <Input
-                id="jobDescription"
                 as="textarea"
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the target job description here..."
-                className="h-48"
+                placeholder="Paste the target job description details here..."
+                className="h-44 text-xs font-medium"
                 required
               />
 
-              {analyzeAsync.error && (
-                <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-3 rounded-lg text-xs font-semibold border-l-4 border-red-500">
-                  {analyzeAsync.error}
+              {activeError && (
+                <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-3.5 rounded-xl text-xs font-semibold border-l-4 border-red-500">
+                  {activeError}
                 </div>
               )}
 
@@ -157,86 +217,214 @@ export default function ResumeAnalyzerPage() {
                 type="submit"
                 variant="primary"
                 className="w-full py-3"
-                loading={analyzeAsync.loading}
-                disabled={!resumeText.trim()}
+                loading={activeLoading}
+                disabled={matchMode === "text" && !resumeText.trim()}
               >
-                ✨ Run AI Analysis
+                📊 Trigger AI Match Engine
               </Button>
             </form>
           </Card>
         </div>
 
-        {/* Results Card */}
-        <Card className="p-6 min-h-[500px]">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2 tracking-tight">
-            📊 Analysis Report
-          </h2>
+        {/* Results Panel (Cols: 3) */}
+        <div className="lg:col-span-3">
+          <Card className="p-6 min-h-[500px] border dark:border-slate-800">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2 tracking-tight">
+              📊 Match Insights Report
+            </h2>
 
-          {!analyzeAsync.data && !analyzeAsync.loading && (
-            <div className="flex flex-col items-center justify-center text-center h-[350px] text-gray-400 dark:text-slate-550">
-              <span className="text-5xl mb-4">🎯</span>
-              <p className="text-sm font-semibold text-gray-900 dark:text-slate-200">Your report will generate here.</p>
-              <p className="text-xs mt-1 text-gray-500 dark:text-slate-400">Upload a resume, paste a job description, and click "Run AI Analysis".</p>
-            </div>
-          )}
-
-          {analyzeAsync.loading && (
-            <div className="flex flex-col items-center justify-center text-center h-[350px] space-y-4">
-              <LoadingSpinner size="lg" message="Google Gemini AI is processing your resume..." />
-              <p className="text-xs text-gray-400 dark:text-slate-550 max-w-xs leading-relaxed">We are parsing key competencies, matching attributes, and identifying skill gaps.</p>
-            </div>
-          )}
-
-          {analyzeAsync.data && (
-            <div className="space-y-6 animate-fadeIn">
-              {/* Score Display */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl border border-gray-150 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-950/20">
-                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center text-2xl font-black ${getScoreColor(analyzeAsync.data.matchScore)}`}>
-                  {analyzeAsync.data.matchScore}%
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-850 dark:text-slate-100">Match Compatibility</h3>
-                  <p className="text-xs text-gray-550 dark:text-slate-400 mt-0.5 leading-relaxed">
-                    {analyzeAsync.data.matchScore >= 80 
-                      ? "Excellent fit! Your resume is strongly aligned with this role."
-                      : analyzeAsync.data.matchScore >= 50
-                      ? "Good potential. Consider tailoring your resume with missing keywords to boost your match rate."
-                      : "Weak match. Significant updates or highlighting transferrable skills might be necessary."}
-                  </p>
-                </div>
+            {!activeData && !activeLoading && (
+              <div className="flex flex-col items-center justify-center text-center h-[400px] text-gray-400 dark:text-slate-550">
+                <span className="text-6xl mb-4">🎯</span>
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-200">Insights will populate here.</p>
+                <p className="text-xs mt-1 text-gray-500 dark:text-slate-400">Provide job description requirements and click "Trigger AI Match Engine".</p>
               </div>
+            )}
 
-              {/* Missing Keywords */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-700 dark:text-slate-350 mb-2.5 uppercase tracking-wider">Missing Keywords / Skill Gaps</h3>
-                <div className="flex flex-wrap gap-2">
-                  {analyzeAsync.data.missingKeywords && analyzeAsync.data.missingKeywords.length > 0 ? (
-                    analyzeAsync.data.missingKeywords.map((word, i) => (
-                      <span key={i} className="bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 font-bold px-3 py-1.5 rounded-xl text-xs border border-amber-100 dark:border-amber-900/40">
-                        {word}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-green-600 dark:text-green-400 italic">No major missing keywords found. Great job!</span>
-                  )}
+            {activeLoading && (
+              <div className="flex flex-col items-center justify-center text-center h-[400px] space-y-4">
+                <LoadingSpinner size="lg" message={`DeepSeek R1 is executing match logic...`} />
+                <p className="text-xs text-gray-450 dark:text-slate-500 max-w-xs leading-relaxed">We are analyzing skills matches, project compatibility, experience layers, and structural alignment gaps.</p>
+              </div>
+            )}
+
+            {activeData && (
+              <div className="space-y-8 animate-fadeIn">
+                {/* CHARTS CONTAINER */}
+                <div className="grid sm:grid-cols-2 gap-6 items-center bg-gray-50/50 dark:bg-slate-950/20 p-5 rounded-2xl border dark:border-slate-850">
+                  {/* Gauge 1: Overall Match (Radial SVG Chart) */}
+                  <div className="flex flex-col items-center justify-center text-center space-y-2">
+                    <h3 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Overall Match</h3>
+                    <div className="relative w-28 h-28 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        {/* Background track circle */}
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="48"
+                          className="stroke-gray-200 dark:stroke-slate-800"
+                          strokeWidth="8"
+                          fill="transparent"
+                        />
+                        {/* Progress track circle */}
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="48"
+                          className={`${getScoreColor(activeData.overallMatch || activeData.matchScore || 0)}`}
+                          strokeWidth="8"
+                          fill="transparent"
+                          strokeDasharray={2 * Math.PI * 48}
+                          strokeDashoffset={2 * Math.PI * 48 * (1 - (activeData.overallMatch || activeData.matchScore || 0) / 100)}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute text-3xl font-black text-indigo-950 dark:text-white">
+                        {activeData.overallMatch || activeData.matchScore || 0}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Breakdown Bars Chart */}
+                  <div className="space-y-3 text-xs font-bold text-gray-650 dark:text-slate-350">
+                    <h3 className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Breakdown metrics</h3>
+                    
+                    {/* Skills Match */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>Skills Match</span>
+                        <span>{activeData.skillsMatch !== undefined ? activeData.skillsMatch : (activeData.matchScore || 50)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-650 dark:bg-indigo-400 rounded-full transition-all duration-500"
+                          style={{ width: `${activeData.skillsMatch !== undefined ? activeData.skillsMatch : (activeData.matchScore || 50)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Experience Match */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>Experience Match</span>
+                        <span>{activeData.experienceMatch !== undefined ? activeData.experienceMatch : (activeData.matchScore - 5 || 45)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all duration-500"
+                          style={{ width: `${activeData.experienceMatch !== undefined ? activeData.experienceMatch : (activeData.matchScore - 5 || 45)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Projects Match */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>Project Match</span>
+                        <span>{activeData.projectMatch !== undefined ? activeData.projectMatch : (activeData.matchScore - 10 || 40)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-500"
+                          style={{ width: `${activeData.projectMatch !== undefined ? activeData.projectMatch : (activeData.matchScore - 10 || 40)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Education Match */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>Education Match</span>
+                        <span>{activeData.educationMatch !== undefined ? activeData.educationMatch : (activeData.matchScore + 5 || 55)}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-400 dark:bg-indigo-350 rounded-full transition-all duration-500"
+                          style={{ width: `${activeData.educationMatch !== undefined ? activeData.educationMatch : (activeData.matchScore + 5 || 55)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Actionable Suggestions */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-700 dark:text-slate-350 mb-2.5 uppercase tracking-wider">Actionable Resume Enhancements</h3>
-                <ul className="space-y-3">
-                  {analyzeAsync.data.tailoringSuggestions && analyzeAsync.data.tailoringSuggestions.map((tip, i) => (
-                    <li key={i} className="flex gap-2.5 text-xs text-gray-650 dark:text-slate-300 leading-relaxed items-start">
-                      <span className="text-indigo-650 dark:text-indigo-400 mt-0.5">✔</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
+                {/* Missing Keywords */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Missing Keywords / Gap areas</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {activeData.missingKeywords && activeData.missingKeywords.length > 0 ? (
+                      activeData.missingKeywords.map((word, i) => (
+                        <span key={i} className="bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 font-bold px-3 py-1.5 rounded-xl text-xs border border-amber-100 dark:border-amber-900/40">
+                          {word}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-green-600 dark:text-green-400 italic">No missing keywords identified. Great fit!</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Master profile matching details (Strengths/Weaknesses/Suggestions) */}
+                {matchMode === "profile" && (
+                  <div className="space-y-6 pt-4 border-t dark:border-slate-850">
+                    {/* Strengths */}
+                    <div className="space-y-2.5">
+                      <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">💪 Key Strengths</h4>
+                      <ul className="space-y-2">
+                        {activeData.strengths && activeData.strengths.map((str, idx) => (
+                          <li key={idx} className="flex gap-2 text-xs text-gray-650 dark:text-slate-300 leading-relaxed items-start">
+                            <span className="text-emerald-500 mt-0.5">✔</span>
+                            <span>{str}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Weaknesses */}
+                    <div className="space-y-2.5">
+                      <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">⚠️ Gap Areas (Weaknesses)</h4>
+                      <ul className="space-y-2">
+                        {activeData.weaknesses && activeData.weaknesses.map((wk, idx) => (
+                          <li key={idx} className="flex gap-2 text-xs text-gray-650 dark:text-slate-300 leading-relaxed items-start">
+                            <span className="text-rose-500 mt-0.5">🛈</span>
+                            <span>{wk}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Suggestions */}
+                    <div className="space-y-2.5">
+                      <h4 className="text-xs font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider">💡 Actionable Tailoring Feedback</h4>
+                      <ul className="space-y-2">
+                        {activeData.suggestions && activeData.suggestions.map((sug, idx) => (
+                          <li key={idx} className="flex gap-2 text-xs text-gray-650 dark:text-slate-300 leading-relaxed items-start">
+                            <span className="text-indigo-500 mt-0.5">💡</span>
+                            <span>{sug}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* Legacy text suggestions display */}
+                {matchMode === "text" && (
+                  <div className="space-y-2.5 pt-4 border-t dark:border-slate-850">
+                    <h4 className="text-xs font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider">💡 Tailoring suggestions</h4>
+                    <ul className="space-y-2">
+                      {activeData.tailoringSuggestions && activeData.tailoringSuggestions.map((tip, idx) => (
+                        <li key={idx} className="flex gap-2 text-xs text-gray-650 dark:text-slate-300 leading-relaxed items-start">
+                          <span className="text-indigo-500 mt-0.5">💡</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </Card>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   )

@@ -140,6 +140,46 @@ export const api = {
     })
   },
 
+  buildProfileStream: async (onChunk) => {
+    const token = localStorage.getItem("token")
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+    const response = await fetch(`${baseUrl}/profile/build`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(text || "Failed to trigger AI profile builder")
+    }
+    
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+    
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split("\n")
+      buffer = lines.pop()
+      
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const chunk = JSON.parse(line.trim())
+            onChunk(chunk)
+          } catch (err) {
+            console.error("Failed to parse chunk line:", line, err)
+          }
+        }
+      }
+    }
+  },
+
   // Backward compatibility aliases
   uploadResume: async (formData) => {
     return request("/profile/upload-resume", {
@@ -160,6 +200,13 @@ export const api = {
     return request("/ai/resume-analyze", {
       method: "POST",
       body: JSON.stringify({ resumeText, jobDescription })
+    })
+  },
+
+  matchAnalyze: async (jobDescription) => {
+    return request("/ai/match-analyze", {
+      method: "POST",
+      body: JSON.stringify({ jobDescription })
     })
   },
 
