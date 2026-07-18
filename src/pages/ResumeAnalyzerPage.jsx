@@ -690,12 +690,20 @@ export default function ResumeAnalyzerPage() {
                               📥 PDF
                             </Button>
                             <Button
-                              variant="primary"
+                              variant="secondary"
                               size="sm"
                               onClick={() => handleDownloadFile(version._id, "docx", `${version.company.replace(/\s+/g,"_")}_Resume.docx`)}
-                              className="text-xs font-bold bg-indigo-650"
+                              className="text-xs font-bold"
                             >
                               📥 DOCX
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleDownloadFile(version._id, "tex", `${version.company.replace(/\s+/g,"_")}_Resume.tex`)}
+                              className="text-xs font-bold bg-indigo-650"
+                            >
+                              📥 LaTeX
                             </Button>
                           </div>
                         </div>
