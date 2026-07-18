@@ -68,6 +68,12 @@ export default function JobTrackerPage() {
   const [automating, setAutomating] = useState(false)
   const [autoMessage, setAutoMessage] = useState("")
 
+  // AI JD Smart Parsing States
+  const [showJdExtractor, setShowJdExtractor] = useState(false)
+  const [rawJdText, setRawJdText] = useState("")
+  const [parsingJd, setParsingJd] = useState(false)
+  const [parseError, setParseError] = useState("")
+
   // Calendar View month configurations
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
@@ -83,6 +89,9 @@ export default function JobTrackerPage() {
   const openCreateModal = () => {
     setSelectedJob(null)
     setAutoMessage("")
+    setShowJdExtractor(false)
+    setRawJdText("")
+    setParseError("")
     setModalData({
       company: "",
       role: "",
@@ -103,6 +112,35 @@ export default function JobTrackerPage() {
       checklist: []
     })
     setIsModalOpen(true)
+  }
+
+  const handleExtractJd = async () => {
+    if (!rawJdText.trim()) {
+      setParseError("Please paste some text to extract.")
+      return
+    }
+    setParseError("")
+    setParsingJd(true)
+    try {
+      const result = await api.parseJobDescription(rawJdText)
+      
+      setModalData(prev => ({
+        ...prev,
+        company: result.company || prev.company,
+        role: result.role || prev.role,
+        location: result.location || prev.location,
+        salary: result.salary || prev.salary,
+        jobDescription: result.jobDescription || rawJdText
+      }))
+      
+      setShowJdExtractor(false)
+      setRawJdText("")
+    } catch (err) {
+      console.error(err)
+      setParseError(err.message || "Failed to parse job description. Please fill details manually.")
+    } finally {
+      setParsingJd(false)
+    }
   }
 
   const openEditModal = (job) => {
@@ -624,6 +662,64 @@ export default function JobTrackerPage() {
             </div>
 
             <form onSubmit={handleModalSave} className="space-y-6">
+              {/* AI AUTO-EXTRACTOR BLOCK FOR NEW JOBS */}
+              {!selectedJob && (
+                <div className="border border-indigo-150 dark:border-indigo-900/40 bg-indigo-50/20 dark:bg-indigo-950/10 p-4 rounded-2xl space-y-3 mb-2">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">✨</span>
+                      <div>
+                        <h4 className="text-xs font-black text-indigo-950 dark:text-indigo-400 uppercase tracking-wide">
+                          AI Smart JD Autofill
+                        </h4>
+                        <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
+                          Paste the raw job description or page details text below to extract fields automatically.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowJdExtractor(!showJdExtractor)}
+                      className="text-xs font-extrabold text-indigo-650 dark:text-indigo-400 hover:underline select-none"
+                    >
+                      {showJdExtractor ? "Hide Panel" : "Show Panel"}
+                    </button>
+                  </div>
+
+                  {showJdExtractor && (
+                    <div className="space-y-3.5 pt-2 border-t dark:border-slate-850 animate-scaleUp">
+                      <textarea
+                        className="w-full text-xs p-3 rounded-xl border border-gray-250 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-28"
+                        placeholder="Paste full job details, title, requirements, description, or page text here..."
+                        value={rawJdText}
+                        onChange={(e) => setRawJdText(e.target.value)}
+                      />
+                      {parseError && (
+                        <p className="text-[10px] text-red-500 font-bold">{parseError}</p>
+                      )}
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          className="flex items-center gap-1.5 font-bold shadow-sm"
+                          onClick={handleExtractJd}
+                          disabled={parsingJd}
+                        >
+                          {parsingJd ? (
+                            <>
+                              <LoadingSpinner size="xs" /> Extracting...
+                            </>
+                          ) : (
+                            <>⚡ Extract Details</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid md:grid-cols-3 gap-5">
                 <Input
                   label="Role Title"

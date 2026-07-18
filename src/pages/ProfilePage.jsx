@@ -810,6 +810,7 @@ function ArraySection({
 }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ ...defaultItem })
+  const [editingIndex, setEditingIndex] = useState(null)
 
   const handleAddFieldChange = (key, val) => {
     setFormData(prev => ({
@@ -821,7 +822,6 @@ function ArraySection({
   const handleAddItem = (e) => {
     e.preventDefault()
     
-    // Simple verification
     const missingRequired = formFields.some(f => f.required && !formData[f.key])
     if (missingRequired) {
       alert("Please fill in all required fields.")
@@ -829,18 +829,48 @@ function ArraySection({
     }
 
     const processed = beforeSave({ ...formData })
-    const updatedItems = [...items, processed]
+    let updatedItems = [...items]
+    
+    if (editingIndex !== null) {
+      updatedItems[editingIndex] = processed
+    } else {
+      updatedItems.push(processed)
+    }
     
     onSave(updatedItems)
     
-    // Close & reset
     setFormData({ ...defaultItem })
+    setEditingIndex(null)
     setShowAddForm(false)
+  }
+
+  const handleStartEdit = (index) => {
+    setEditingIndex(index)
+    const item = items[index]
+    
+    let mappedData = { ...item }
+    if (item.technologies && !item.technologiesRaw) {
+      mappedData.technologiesRaw = item.technologies.join(", ")
+    }
+    
+    setFormData(mappedData)
+    setShowAddForm(true)
   }
 
   const handleDeleteItem = (indexToDelete) => {
     const updated = items.filter((_, idx) => idx !== indexToDelete)
     onSave(updated)
+    if (editingIndex === indexToDelete) {
+      setEditingIndex(null)
+      setFormData({ ...defaultItem })
+      setShowAddForm(false)
+    }
+  }
+
+  const handleCloseForm = () => {
+    setShowAddForm(false)
+    setEditingIndex(null)
+    setFormData({ ...defaultItem })
   }
 
   return (
@@ -850,15 +880,23 @@ function ArraySection({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              handleCloseForm()
+            } else {
+              setShowAddForm(true)
+            }
+          }}
         >
           {showAddForm ? "Close Form" : "➕ Add Item"}
         </Button>
       </div>
 
-      {/* Add Item form */}
       {showAddForm && (
         <form onSubmit={handleAddItem} className="bg-gray-50/50 dark:bg-slate-950/20 border dark:border-slate-850 p-4 rounded-2xl space-y-4 animate-scaleUp">
+          <h4 className="text-xs font-black text-indigo-650 dark:text-indigo-400 uppercase tracking-wide">
+            {editingIndex !== null ? "✏ Edit Item Details" : "➕ Add New Item"}
+          </h4>
           <div className="grid gap-4 sm:grid-cols-2">
             {formFields.map(field => {
               if (field.type === "checkbox") {
@@ -891,29 +929,43 @@ function ArraySection({
               )
             })}
           </div>
-          <div className="flex justify-end pt-1">
+          <div className="flex justify-end gap-2 pt-1">
+            {editingIndex !== null && (
+              <Button type="button" variant="secondary" size="sm" onClick={handleCloseForm}>
+                Cancel
+              </Button>
+            )}
             <Button type="submit" variant="primary" size="sm">
-              Confirm Add
+              {editingIndex !== null ? "Update Item" : "Confirm Add"}
             </Button>
           </div>
         </form>
       )}
 
-      {/* List of current items */}
       <div className="space-y-3.5">
         {items.map((item, idx) => (
           <div key={idx} className="flex justify-between items-start gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-150 dark:border-slate-800 shadow-xs relative hover:border-gray-200 dark:hover:border-slate-705 transition">
             <div className="flex-1 text-xs">
               {renderItem(item)}
             </div>
-            <button
-              type="button"
-              onClick={() => handleDeleteItem(idx)}
-              className="text-gray-450 hover:text-red-500 text-sm font-semibold select-none transition"
-              title="Delete Item"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2 select-none">
+              <button
+                type="button"
+                onClick={() => handleStartEdit(idx)}
+                className="text-indigo-650 hover:text-indigo-750 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs font-bold transition"
+                title="Edit Item"
+              >
+                ✏ Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteItem(idx)}
+                className="text-gray-400 hover:text-red-500 text-sm font-semibold transition"
+                title="Delete Item"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ))}
         {items.length === 0 && (
@@ -921,13 +973,12 @@ function ArraySection({
         )}
       </div>
 
-      {items.length > 0 && (
-        <div className="flex justify-end pt-4 border-t dark:border-slate-850">
-          <Button onClick={submitTrigger} variant="primary" loading={isUpdating}>
-            Save All Changes
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end pt-4 border-t dark:border-slate-850">
+        <Button onClick={submitTrigger} variant="primary" loading={isUpdating}>
+          Save All Changes
+        </Button>
+      </div>
     </div>
   )
 }
+

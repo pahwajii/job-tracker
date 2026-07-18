@@ -210,6 +210,13 @@ export const api = {
     })
   },
 
+  parseJobDescription: async (text) => {
+    return request("/ai/parse-job", {
+      method: "POST",
+      body: JSON.stringify({ text })
+    })
+  },
+
   generateApplyAssist: async (jobId) => {
     return request("/ai/apply-assist", {
       method: "POST",
