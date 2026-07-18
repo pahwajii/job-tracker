@@ -670,12 +670,12 @@ export default function ResumeAnalyzerPage() {
                 {!tailorResumeAsync.loading && tailorHistory.length > 0 && (
                   <div className="space-y-6 animate-fadeIn">
                     {tailorHistory.map((version, idx) => (
-                      <div key={version._id} className={`border dark:border-slate-850 rounded-2xl p-5 space-y-5 ${idx === 0 ? "bg-indigo-50/10 dark:bg-slate-900/40 border-indigo-150" : "bg-white"}`}>
+                      <div key={version._id} className={`border rounded-2xl p-5 space-y-5 transition duration-150 ${idx === 0 ? "bg-indigo-50/5 dark:bg-slate-900/40 border-indigo-150 dark:border-slate-800" : "bg-white dark:bg-slate-900 border-gray-150 dark:border-slate-800"}`}>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b dark:border-slate-850 pb-4">
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs bg-indigo-600 text-white font-bold px-2 py-0.5 rounded">Version {tailorHistory.length - idx}</span>
-                              <span className="text-xs text-gray-450 font-semibold">{new Date(version.createdAt).toLocaleString()}</span>
+                              <span className="text-xs text-gray-500 dark:text-slate-400 font-semibold">{new Date(version.createdAt).toLocaleString()}</span>
                             </div>
                             <h4 className="text-sm font-bold text-indigo-950 dark:text-white mt-1.5">{version.position} at {version.company}</h4>
                           </div>
@@ -733,7 +733,7 @@ export default function ResumeAnalyzerPage() {
                         {version.suggestions?.length > 0 && (
                           <div className="space-y-1.5">
                             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Optimization Feedback</span>
-                            <ul className="space-y-1 text-[11px] text-gray-655 dark:text-slate-350 list-disc list-inside leading-normal">
+                            <ul className="space-y-1 text-[11px] text-gray-600 dark:text-slate-300 list-disc list-inside leading-normal">
                               {version.suggestions.map((s, i) => (
                                 <li key={i}>{s}</li>
                               ))}
