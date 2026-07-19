@@ -19,6 +19,8 @@ export default function ResumeAnalyzerPage() {
   const [jobs, setJobs] = useState([])
   const [selectedJobId, setSelectedJobId] = useState("")
   const [tailorHistory, setTailorHistory] = useState([])
+  const [loadingKimi, setLoadingKimi] = useState(false)
+  const [loadingClaude, setLoadingClaude] = useState(false)
 
   // Outreach assistant state variables
   const [outreachType, setOutreachType] = useState("Cover Letter")
@@ -132,13 +134,37 @@ export default function ResumeAnalyzerPage() {
     e.preventDefault()
     if (!selectedJobId) return
 
-    try {
-      const data = await tailorResumeAsync.execute(selectedJobId)
-      setTailorHistory(prev => [data, ...prev])
-      showToast("Resume tailored successfully!", "success")
-    } catch (err) {
-      showToast(err.message || "Tailoring failed.", "error")
-    }
+    setLoadingKimi(true)
+    setLoadingClaude(true)
+    showToast("Launching tailoring pipeline: Kimi 2.7 (Fast) & Claude Sonnet (Premium) are processing...", "info")
+
+    // Call A: Kimi (Fast)
+    api.tailorResume(selectedJobId, "kimi-k2.7-code")
+      .then(data => {
+        setTailorHistory(prev => [data, ...prev])
+        showToast("Kimi 2.7 (Fast Version) tailored successfully!", "success")
+      })
+      .catch(err => {
+        console.error("Kimi tailoring failed:", err)
+        showToast("Fast version (Kimi) failed: " + (err.message || err), "error")
+      })
+      .finally(() => {
+        setLoadingKimi(false)
+      })
+
+    // Call B: Claude Sonnet (Premium)
+    api.tailorResume(selectedJobId, "claude-sonnet-4-6")
+      .then(data => {
+        setTailorHistory(prev => [data, ...prev])
+        showToast("Claude Sonnet (Premium Version) tailored successfully!", "success")
+      })
+      .catch(err => {
+        console.error("Claude tailoring failed:", err)
+        showToast("Premium version (Claude) failed: " + (err.message || err), "error")
+      })
+      .finally(() => {
+        setLoadingClaude(false)
+      })
   }
 
   const handleDownloadFile = async (id, fileType, defaultName) => {
@@ -407,7 +433,7 @@ export default function ResumeAnalyzerPage() {
                   onClick={handleRunTailoring}
                   variant="primary"
                   className="w-full py-3"
-                  loading={tailorResumeAsync.loading}
+                  loading={loadingKimi || loadingClaude}
                 >
                   ✨ Run AI Wording Tailoring
                 </Button>
@@ -652,14 +678,21 @@ export default function ResumeAnalyzerPage() {
             {/* TAILORING RESULTS RENDERING */}
             {matchMode === "tailor" && (
               <div className="space-y-6">
-                {tailorResumeAsync.loading && (
+                {(loadingKimi || loadingClaude) && (
                   <div className="flex flex-col items-center justify-center text-center h-[350px] space-y-4">
-                    <LoadingSpinner size="lg" message="Claude Sonnet is optimizing your resume content..." />
-                    <p className="text-xs text-gray-450 dark:text-slate-500 max-w-xs leading-relaxed">We are restructuring job descriptions, rephrasing statements, and packing output files for PDF & Word.</p>
+                    <LoadingSpinner 
+                      size="lg" 
+                      message={loadingKimi && loadingClaude ? "Kimi 2.7 & Claude Sonnet are tailoring your resume..." : "Claude Sonnet is finishing premium optimization..."} 
+                    />
+                    <p className="text-xs text-gray-450 dark:text-slate-500 max-w-xs leading-relaxed">
+                      {loadingKimi && loadingClaude 
+                        ? "Running two AI models concurrently. The fast version (Kimi) will load in seconds, followed by Claude's premium output."
+                        : "Fast version is ready for download! Waiting for Claude to complete high-fidelity keyword adjustments."}
+                    </p>
                   </div>
                 )}
 
-                {!tailorResumeAsync.loading && tailorHistory.length === 0 && (
+                {!(loadingKimi || loadingClaude) && tailorHistory.length === 0 && (
                   <div className="flex flex-col items-center justify-center text-center h-[350px] text-gray-400 dark:text-slate-550">
                     <span className="text-6xl mb-4">✨</span>
                     <p className="text-sm font-semibold text-gray-900 dark:text-slate-200">No tailored versions found.</p>
@@ -667,14 +700,17 @@ export default function ResumeAnalyzerPage() {
                   </div>
                 )}
 
-                {!tailorResumeAsync.loading && tailorHistory.length > 0 && (
+                {tailorHistory.length > 0 && (
                   <div className="space-y-6 animate-fadeIn">
                     {tailorHistory.map((version, idx) => (
                       <div key={version._id} className={`border rounded-2xl p-5 space-y-5 transition duration-150 ${idx === 0 ? "bg-indigo-50/5 dark:bg-slate-900/40 border-indigo-150 dark:border-slate-800" : "bg-white dark:bg-slate-900 border-gray-150 dark:border-slate-800"}`}>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b dark:border-slate-850 pb-4">
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs bg-indigo-600 text-white font-bold px-2 py-0.5 rounded">Version {tailorHistory.length - idx}</span>
+                              <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold px-2 py-0.5 rounded border dark:border-slate-700/60 uppercase">
+                                {version.modelUsed === "kimi-k2.7-code" ? "Kimi 2.7 (Fast)" : version.modelUsed === "claude-sonnet-4-6" ? "Claude 3.5 (Premium)" : version.modelUsed || "Claude 3.5"}
+                              </span>
                               <span className="text-xs text-gray-500 dark:text-slate-400 font-semibold">{new Date(version.createdAt).toLocaleString()}</span>
                             </div>
                             <h4 className="text-sm font-bold text-indigo-950 dark:text-white mt-1.5">{version.position} at {version.company}</h4>

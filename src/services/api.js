@@ -224,11 +224,10 @@ export const api = {
     })
   },
 
-  // Resume Tailoring API
-  tailorResume: async (jobId) => {
+  tailorResume: async (jobId, useModel = null) => {
     return request("/resume/tailor", {
       method: "POST",
-      body: JSON.stringify({ jobId })
+      body: JSON.stringify({ jobId, useModel })
     })
   },
 
