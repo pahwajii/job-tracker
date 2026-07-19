@@ -786,7 +786,7 @@ export default function ResumeAnalyzerPage() {
                         )}
 
                         <div className="space-y-1.5 pt-2">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tailored Markdown Preview</span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tailored LaTeX Source Preview</span>
                           <div className="h-44 overflow-y-auto bg-slate-900 text-slate-100 p-4 rounded-xl border dark:border-slate-800 font-mono text-[10px] whitespace-pre-wrap leading-normal">
                             {version.tailoredText}
                           </div>
