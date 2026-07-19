@@ -711,6 +711,11 @@ export default function ResumeAnalyzerPage() {
                               <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold px-2 py-0.5 rounded border dark:border-slate-700/60 uppercase">
                                 {version.modelUsed === "kimi-k2.7-code" ? "Kimi 2.7 (Fast)" : version.modelUsed === "claude-sonnet-4-6" ? "Claude 3.5 (Premium)" : version.modelUsed || "Claude 3.5"}
                               </span>
+                              {version.pdfCompiled === false && (
+                                <span className="text-[10px] bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/30 uppercase">
+                                  ⚠️ Compiler Fallback
+                                </span>
+                              )}
                               <span className="text-xs text-gray-500 dark:text-slate-400 font-semibold">{new Date(version.createdAt).toLocaleString()}</span>
                             </div>
                             <h4 className="text-sm font-bold text-indigo-950 dark:text-white mt-1.5">{version.position} at {version.company}</h4>
@@ -721,18 +726,31 @@ export default function ResumeAnalyzerPage() {
                               variant="secondary"
                               size="sm"
                               onClick={() => handleDownloadFile(version._id, "pdf", `${version.company.replace(/\s+/g,"_")}_Resume.pdf`)}
-                              className="text-xs font-bold"
+                              className={`text-xs font-bold ${version.pdfCompiled === false ? 'border-amber-300 text-amber-700 dark:text-amber-400 dark:border-amber-900/40' : ''}`}
+                              title={version.pdfCompiled === false ? "PDF was built using compiler fallback. Install tectonic or pdflatex for high-fidelity LaTeX PDFs." : "Download PDF Resume"}
                             >
-                              📥 PDF
+                              📥 PDF {version.pdfCompiled === false && "⚠️"}
                             </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleDownloadFile(version._id, "docx", `${version.company.replace(/\s+/g,"_")}_Resume.docx`)}
-                              className="text-xs font-bold"
-                            >
-                              📥 DOCX
-                            </Button>
+                            {version.docxFileName ? (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleDownloadFile(version._id, "docx", `${version.company.replace(/\s+/g,"_")}_Resume.docx`)}
+                                className="text-xs font-bold"
+                              >
+                                📥 DOCX
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled
+                                title="DOCX generation requires Pandoc on the backend server"
+                                className="text-xs font-bold opacity-40 cursor-not-allowed"
+                              >
+                                📥 DOCX
+                              </Button>
+                            )}
                             <Button
                               variant="primary"
                               size="sm"
